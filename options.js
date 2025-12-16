@@ -433,22 +433,53 @@ class OptionsManager {
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
                     const imported = JSON.parse(event.target.result);
-                    const count = Object.keys(imported).length;
+                    const entries = Object.entries(imported);
+                    const count = entries.length;
+
+                    if (count === 0) {
+                        alert('❌ No scripts found in the file');
+                        return;
+                    }
 
                     if (confirm(`Import ${count} script(s)? Existing scripts with same patterns will be overwritten.`)) {
-                        this.scripts = { ...this.scripts, ...imported };
-                        this.filteredScripts = { ...this.scripts };
+                        // Save ALL scripts, not just the first one
+                        let successCount = 0;
+                        let failCount = 0;
 
-                        this.sendMessage(
-                            { action: 'saveScript', scriptId: Object.keys(imported)[0], scriptData: Object.values(imported)[0] },
-                            () => {
-                                this.loadScripts();
-                                console.log(`✅ Imported ${count} script(s)`);
+                        for (const [pattern, scriptData] of entries) {
+                            try {
+                                await new Promise((resolve, reject) => {
+                                    this.sendMessage(
+                                        { action: 'saveScript', scriptId: pattern, scriptData },
+                                        (response) => {
+                                            if (response.success) {
+                                                successCount++;
+                                                resolve();
+                                            } else {
+                                                failCount++;
+                                                reject(response.error);
+                                            }
+                                        }
+                                    );
+                                });
+                            } catch (err) {
+                                console.error(`Failed to import script: ${pattern}`, err);
                             }
-                        );
+                        }
+
+                        // Reload scripts after all imports complete
+                        this.loadScripts();
+                        
+                        if (failCount === 0) {
+                            console.log(`✅ Successfully imported ${successCount} script(s)`);
+                            alert(`✅ Successfully imported ${successCount} script(s)`);
+                        } else {
+                            console.warn(`⚠️ Imported ${successCount} script(s), ${failCount} failed`);
+                            alert(`⚠️ Imported ${successCount} script(s), ${failCount} failed`);
+                        }
                     }
                 } catch (error) {
                     alert('❌ Invalid JSON file: ' + error.message);

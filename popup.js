@@ -42,8 +42,60 @@ class PopupManager {
                 this.currentTab = response.tab;
                 this.updateCurrentSite();
                 this.loadScripts();
+                this.loadHiddenSettings();
             }
         });
+    }
+
+    /**
+     * Load hidden element settings for current site
+     */
+    async loadHiddenSettings() {
+        if (!this.currentTab?.url) return;
+        const url = new URL(this.currentTab.url);
+        
+        this.sendMessage(
+            { action: 'getHiddenSettings', hostname: url.hostname },
+            (response) => {
+                const settings = response.settings || { enabled: false, selectors: '' };
+                document.getElementById('hideElementsToggle').checked = settings.enabled;
+                document.getElementById('hideElementsInput').value = settings.selectors || '';
+            }
+        );
+    }
+
+    /**
+     * Save hidden element settings
+     */
+    saveHiddenSettings() {
+        if (!this.currentTab?.url) return;
+        const url = new URL(this.currentTab.url);
+        
+        const enabled = document.getElementById('hideElementsToggle').checked;
+        const selectors = document.getElementById('hideElementsInput').value;
+
+        this.sendMessage(
+            { 
+                action: 'saveHiddenSettings', 
+                hostname: url.hostname,
+                settings: { enabled, selectors }
+            },
+            (response) => {
+                if (response.success) {
+                    const btn = document.getElementById('saveHiddenBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Saved!';
+                    btn.style.background = '#10b981';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 1500);
+                    
+                    // Reload page to apply changes
+                    chrome.tabs.reload(this.currentTab.id);
+                }
+            }
+        );
     }
 
     /**
@@ -221,6 +273,10 @@ class PopupManager {
     setupEventListeners() {
         document.getElementById('manageScripts').addEventListener('click', () => {
             chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+        });
+
+        document.getElementById('saveHiddenBtn').addEventListener('click', () => {
+            this.saveHiddenSettings();
         });
     }
 

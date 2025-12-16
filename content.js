@@ -17,7 +17,10 @@ class ScriptRunner {
      */
     constructor() {
         this.scripts = {};
+        this.executedScripts = new Set(); // Track executed scripts to prevent duplicates
+        this.pendingExecutions = new Map(); // Debounce timers for each script
         this.loadScripts();
+        this.loadHiddenSettings();
     }
 
     /**
@@ -45,30 +48,81 @@ class ScriptRunner {
 
     /**
      * Execute scripts that match the current page URL
-     * Implements multiple execution strategies for reliability:
-     * - Immediate execution for fast-loading pages
-     * - Retry on window load for late-loading elements
-     * - DOM observation for dynamically loaded content
+     * Uses smart execution strategy to prevent duplicate runs:
+     * - Executes once when DOM is ready
+     * - Re-executes only on significant DOM changes (debounced)
      */
     runScripts() {
         const currentUrl = window.location.href;
 
         Object.entries(this.scripts).forEach(([pattern, script]) => {
             if (script.enabled !== false && this.urlMatchesPattern(currentUrl, pattern)) {
-                // Try immediately
-                this.executeScript(script.code, pattern, script.name);
+                const scriptKey = `${pattern}:${currentUrl}`;
+                
+                // Execute script with smart timing
+                this.scheduleExecution(scriptKey, script.code, pattern, script.name);
+            }
+        });
+    }
 
-                // Retry after DOM fully loads
-                if (document.readyState !== 'complete') {
-                    window.addEventListener('load', () => {
-                        this.executeScript(script.code, pattern, script.name);
-                    });
+    /**
+     * Schedule script execution with debounce to prevent duplicates
+     * @param {string} scriptKey - Unique key for this script+URL combination
+     * @param {string} code - JavaScript code to execute
+     * @param {string} pattern - URL pattern
+     * @param {string} name - Script name
+     */
+    scheduleExecution(scriptKey, code, pattern, name) {
+        // Clear any pending execution for this script
+        if (this.pendingExecutions.has(scriptKey)) {
+            clearTimeout(this.pendingExecutions.get(scriptKey));
+        }
+
+        // If already executed and DOM is complete, don't re-execute immediately
+        if (this.executedScripts.has(scriptKey) && document.readyState === 'complete') {
+            return;
+        }
+
+        const execute = () => {
+            if (!this.executedScripts.has(scriptKey)) {
+                this.executedScripts.add(scriptKey);
+                this.executeScript(code, pattern, name);
+            }
+        };
+
+        // Execute based on document state
+        if (document.readyState === 'complete') {
+            execute();
+        } else if (document.readyState === 'interactive') {
+            // DOM is ready but resources still loading
+            execute();
+        } else {
+            // Wait for DOMContentLoaded
+            const timer = setTimeout(() => {
+                if (document.readyState !== 'loading') {
+                    execute();
+                } else {
+                    document.addEventListener('DOMContentLoaded', execute, { once: true });
                 }
+            }, 100);
+            this.pendingExecutions.set(scriptKey, timer);
+        }
 
-                // Also try with MutationObserver for lazy-loaded content
-                this.observeDOM(() => {
-                    this.executeScript(script.code, pattern, script.name);
-                });
+        // Setup observer for dynamic content (with debounce)
+        this.observeDOM(() => {
+            // Allow re-execution after significant DOM changes
+            // but only if enough time has passed
+            const rerunKey = `${scriptKey}:rerun`;
+            if (!this.pendingExecutions.has(rerunKey)) {
+                this.executedScripts.delete(scriptKey); // Allow re-execution
+                this.executeScript(code, pattern, name);
+                this.executedScripts.add(scriptKey);
+                
+                // Prevent rapid re-executions
+                const cooldown = setTimeout(() => {
+                    this.pendingExecutions.delete(rerunKey);
+                }, 5000); // 5 second cooldown between re-runs
+                this.pendingExecutions.set(rerunKey, cooldown);
             }
         });
     }
@@ -153,6 +207,63 @@ class ScriptRunner {
             }
         );
     }
+
+    /**
+     * Load hidden element settings for the current page
+     */
+    async loadHiddenSettings() {
+        try {
+            chrome.runtime.sendMessage(
+                { action: 'getHiddenSettings', hostname: window.location.hostname },
+                (response) => {
+                    if (response && response.settings) {
+                        this.applyHiddenStyles(response.settings);
+                    }
+                }
+            );
+        } catch (error) {
+            console.warn('Failed to load hidden settings:', error);
+        }
+    }
+
+    /**
+     * Apply hidden element styles based on settings
+     * @param {Object} settings - { enabled, selectors }
+     */
+    applyHiddenStyles(settings) {
+        const styleId = 'web-customizer-hidden-styles';
+        let styleEl = document.getElementById(styleId);
+
+        if (!settings.enabled || !settings.selectors) {
+            if (styleEl) styleEl.remove();
+            return;
+        }
+
+        const selectors = settings.selectors.split(',').map(s => {
+            s = s.trim();
+            if (!s) return null;
+            // If already a selector (starts with . or # or [), use it
+            if (s.startsWith('.') || s.startsWith('#') || s.startsWith('[')) return s;
+            
+            // Assume it's a class or list of classes
+            // Split by space to handle "class1 class2" -> ".class1.class2"
+            return '.' + s.split(/\s+/).join('.');
+        }).filter(Boolean).join(', ');
+
+        if (!selectors) {
+            if (styleEl) styleEl.remove();
+            return;
+        }
+
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = styleId;
+            document.head.appendChild(styleEl);
+        }
+
+        styleEl.textContent = `${selectors} { display: none !important; }`;
+        console.log('🚫 Hidden elements applied:', selectors);
+    }
 }
 
 /**
@@ -164,13 +275,28 @@ const scriptRunner = new ScriptRunner();
 /**
  * Listen for Chrome storage changes to reload scripts
  * Automatically updates scripts when user makes changes in popup
+ * Resets execution tracking to allow re-execution of updated scripts
  *
  * @param {Object} changes - Storage changes object
  * @param {string} namespace - Storage namespace (should be 'local')
  */
 chrome.storage.local.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.userScripts) {
-        scriptRunner.scripts = changes.userScripts.newValue || {};
-        scriptRunner.runScripts();
+    if (namespace === 'local') {
+        if (changes.userScripts) {
+            scriptRunner.scripts = changes.userScripts.newValue || {};
+            // Reset execution tracking to allow updated scripts to run
+            scriptRunner.executedScripts.clear();
+            scriptRunner.pendingExecutions.forEach(timer => clearTimeout(timer));
+            scriptRunner.pendingExecutions.clear();
+            scriptRunner.runScripts();
+        }
+        
+        if (changes.hiddenSettings) {
+            const newSettings = changes.hiddenSettings.newValue || {};
+            const hostSettings = newSettings[window.location.hostname];
+            if (hostSettings) {
+                scriptRunner.applyHiddenStyles(hostSettings);
+            }
+        }
     }
 });

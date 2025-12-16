@@ -206,10 +206,12 @@ let count = 0;
 
 images.forEach((img, index) => {
     if (img.src && !img.src.startsWith('data:')) {
-        const a = document.createElement('a');
-        a.href = img.src;
-        a.download = \`image-\${index + 1}.jpg\`;
-        a.click();
+        setTimeout(() => {
+            const a = document.createElement('a');
+            a.href = img.src;
+            a.download = \`image-\${index + 1}.jpg\`;
+            a.click();
+        }, index * 200); // Add delay to prevent browser blocking
         count++;
     }
 });
@@ -248,22 +250,13 @@ const highlightColor = '#ffff00';
 function highlightText(node) {
     if (node.nodeType === Node.TEXT_NODE) {
         let text = node.textContent;
-        let hasMatch = false;
-        
-        keywords.forEach(keyword => {
-            if (text.toLowerCase().includes(keyword.toLowerCase())) {
-                hasMatch = true;
-            }
-        });
-        
-        if (hasMatch) {
+        if (keywords.some(k => text.toLowerCase().includes(k.toLowerCase()))) {
             const span = document.createElement('span');
-            span.innerHTML = text;
-            keywords.forEach(keyword => {
-                const regex = new RegExp(\`(\${keyword})\`, 'gi');
-                span.innerHTML = span.innerHTML.replace(regex, 
-                    \`<mark style="background: \${highlightColor};">$1</mark>\`);
-            });
+            // Create a single regex for all keywords to avoid replacing HTML tags or attributes
+            const regex = new RegExp('(' + keywords.map(k => k.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\$&')).join('|') + ')', 'gi');
+            
+            span.innerHTML = text.replace(regex, 
+                \`<mark style="background: \${highlightColor};">$1</mark>\`);
             node.parentNode.replaceChild(span, node);
         }
     } else if (node.nodeType === Node.ELEMENT_NODE && 
@@ -290,8 +283,8 @@ function startAutoScroll() {
     scrollInterval = setInterval(() => {
         window.scrollBy(0, scrollSpeed);
         
-        // Dừng khi đến cuối trang
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+        // Stop when reaching the bottom (with 10px buffer)
+        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10) {
             stopAutoScroll();
             console.log('Reached end of page');
         }

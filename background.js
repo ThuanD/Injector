@@ -47,8 +47,15 @@ class BackgroundScriptManager {
             if (!userScripts) {
                 await chrome.storage.local.set({
                     userScripts: {},
+                    hiddenSettings: {},
                     settings: { autoRun: true, debugMode: false }
                 });
+            } else {
+                // Ensure hiddenSettings exists for legacy updates
+                const { hiddenSettings } = await chrome.storage.local.get('hiddenSettings');
+                if (!hiddenSettings) {
+                    await chrome.storage.local.set({ hiddenSettings: {} });
+                }
             }
         } catch (error) {
             console.error('❌ Failed to initialize storage:', error);
@@ -97,6 +104,12 @@ class BackgroundScriptManager {
                     break;
                 case 'getLogs':
                     sendResponse({ logs: this.logs });
+                    break;
+                case 'getHiddenSettings':
+                    await this.getHiddenSettings(request.hostname, sendResponse);
+                    break;
+                case 'saveHiddenSettings':
+                    await this.saveHiddenSettings(request.hostname, request.settings, sendResponse);
                     break;
                 default:
                     sendResponse({ error: 'Unknown action' });
@@ -177,7 +190,7 @@ class BackgroundScriptManager {
 
     /**
      * Execute script in isolated world context of a tab
-     * Creates a blob URL to inject script as an external file
+     * Uses chrome.scripting.executeScript with function injection
      *
      * @param {number} tabId - Target tab ID
      * @param {string} code - JavaScript code to execute
@@ -186,15 +199,21 @@ class BackgroundScriptManager {
      */
     async executeScriptInTab(tabId, code, scriptId, sendResponse) {
         try {
-            const blob = new Blob([code], { type: 'text/javascript' });
-            const url = URL.createObjectURL(blob);
-
             await chrome.scripting.executeScript({
                 target: { tabId },
-                files: [url]
+                func: (scriptCode) => {
+                    try {
+                        // Create a function from the code and execute it
+                        const fn = new Function(scriptCode);
+                        fn();
+                    } catch (error) {
+                        console.error('Script execution error:', error);
+                        throw error;
+                    }
+                },
+                args: [code]
             });
 
-            URL.revokeObjectURL(url);
             this.addLog(`Executed: ${scriptId}`, 'execute', 'success');
             sendResponse({ success: true });
         } catch (error) {
@@ -273,6 +292,34 @@ class BackgroundScriptManager {
         if (this.logs.length > this.MAX_LOGS) {
             this.logs.pop();
         }
+    }
+
+    /**
+     * Retrieve hidden element settings for a hostname
+     * @param {string} hostname - Target hostname
+     * @param {Function} sendResponse - Function to send settings back
+     */
+    async getHiddenSettings(hostname, sendResponse) {
+        const { hiddenSettings } = await chrome.storage.local.get('hiddenSettings');
+        const settings = hiddenSettings || {};
+        sendResponse({ settings: settings[hostname] || null });
+    }
+
+    /**
+     * Save hidden element settings for a hostname
+     * @param {string} hostname - Target hostname
+     * @param {Object} settings - Settings object { enabled: boolean, selectors: string }
+     * @param {Function} sendResponse - Function to send confirmation
+     */
+    async saveHiddenSettings(hostname, settings, sendResponse) {
+        const { hiddenSettings } = await chrome.storage.local.get('hiddenSettings');
+        const currentSettings = hiddenSettings || {};
+        
+        currentSettings[hostname] = settings;
+        
+        await chrome.storage.local.set({ hiddenSettings: currentSettings });
+        this.addLog(`Updated hidden elements for ${hostname}`, 'save');
+        sendResponse({ success: true });
     }
 }
 
