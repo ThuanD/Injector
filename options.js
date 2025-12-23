@@ -193,6 +193,7 @@ class OptionsManager {
     }
 
     showScriptModalWithTemplate(template) {
+        this.currentEditId = null; // Ensure we are in "create" mode, not "edit" mode
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -281,8 +282,7 @@ class OptionsManager {
                 <div class="form-group">
                     <label>URL Pattern *</label>
                     <input type="text" id="urlPattern" value="${this.escapeHtml(scriptId || '')}" 
-                        placeholder="e.g., *.example.com or https://example.com/*" 
-                        ${scriptId ? 'readonly style="background: var(--bg);"' : ''}>
+                        placeholder="e.g., *.example.com or https://example.com/*">
                     <div class="pattern-help">
                         <strong>Pattern examples:</strong><br>
                         • <code>*</code> - Run on all websites<br>
@@ -343,12 +343,33 @@ class OptionsManager {
         }
 
         const scriptData = { name, description, code, pattern };
+        const oldScriptId = this.currentEditId;
 
         this.sendMessage(
             { action: 'saveScript', scriptId: pattern, scriptData },
-            (response) => {
+            async (response) => {
                 if (response.success) {
                     this.scripts[pattern] = scriptData;
+
+                    // If renaming (pattern changed), delete the old script
+                    if (oldScriptId && oldScriptId !== pattern) {
+                        try {
+                            await new Promise((resolve) => {
+                                this.sendMessage({ action: 'deleteScript', scriptId: oldScriptId }, (delResponse) => {
+                                    if (delResponse.success) {
+                                        delete this.scripts[oldScriptId];
+                                        console.log(`✅ Old script deleted: ${oldScriptId}`);
+                                    } else {
+                                        console.warn(`⚠️ Failed to delete old script: ${oldScriptId}`);
+                                    }
+                                    resolve();
+                                });
+                            });
+                        } catch (err) {
+                            console.error('Error deleting old script during rename:', err);
+                        }
+                    }
+
                     this.filteredScripts = { ...this.scripts };
                     this.renderScripts();
                     console.log(`✅ Script saved: ${pattern}`);

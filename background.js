@@ -238,9 +238,13 @@ class BackgroundScriptManager {
                 world: 'MAIN',
                 func: (scriptCode) => {
                     try {
-                        eval(scriptCode);
+                        const script = document.createElement('script');
+                        script.textContent = scriptCode;
+                        (document.head || document.documentElement).appendChild(script);
+                        script.remove();
                     } catch (error) {
                         console.error('Script execution error:', error);
+                        throw error;
                     }
                 },
                 args: [code]

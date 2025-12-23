@@ -172,15 +172,28 @@ class PopupManager {
      * @returns {boolean} True if URL matches the pattern
      */
     urlMatchesPattern(url, pattern) {
-        if (pattern === '*') return true;
-        if (pattern.startsWith('*.')) {
-            return url.includes(pattern.slice(2));
+        try {
+            if (!pattern) return false;
+            if (pattern === '*') return true;
+
+            // Handle wildcard patterns
+            if (pattern.includes('*')) {
+                // Escape special regex characters INCLUDING *
+                // We escape * to \* so we can safely identify it and replace it with .*
+                const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                
+                // Convert escaped asterisk (\*) to regex wildcard (.*)
+                const regexString = '^' + escaped.replace(/\\\*/g, '.*') + '$';
+                
+                const regex = new RegExp(regexString);
+                return regex.test(url);
+            }
+
+            return url.includes(pattern);
+        } catch (error) {
+            console.warn('URL matching error:', error);
+            return false;
         }
-        if (pattern.includes('*')) {
-            const regex = new RegExp('^' + pattern.replace(/\//g, '.*') + '$');
-            return regex.test(url);
-        }
-        return url.includes(pattern);
     }
 
     /**
@@ -250,7 +263,7 @@ class PopupManager {
 
         this.sendMessage(
             {
-                action: 'executeScript',
+                action: 'executeScriptInMainWorld',
                 tabId: this.currentTab.id,
                 code: code,
                 scriptId: pattern

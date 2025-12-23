@@ -166,19 +166,29 @@ class ScriptRunner {
      * @returns {boolean} True if URL matches the pattern
      */
     urlMatchesPattern(url, pattern) {
-        if (pattern === '*') return true;
+        try {
+            if (!pattern) return false;
+            if (pattern === '*') return true;
 
-        if (pattern.startsWith('*.')) {
-            const domain = pattern.slice(2);
-            return url.includes(domain);
+            // Handle wildcard patterns
+            if (pattern.includes('*')) {
+                // 1. Escape special regex characters INCLUDING *
+                // We escape * so we can consistently target it for replacement
+                const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                
+                // 2. Convert escaped asterisk (\*) to regex wildcard (.*)
+                const regexString = '^' + escaped.replace(/\\\*/g, '.*') + '$';
+                
+                const regex = new RegExp(regexString);
+                return regex.test(url);
+            }
+
+            // Fallback for exact substring match (legacy behavior)
+            return url.includes(pattern);
+        } catch (error) {
+            console.warn('URL matching error for pattern:', pattern, error);
+            return false;
         }
-
-        if (pattern.includes('*')) {
-            const regex = new RegExp('^' + pattern.replace(/\//g, '.*') + '$');
-            return regex.test(url);
-        }
-
-        return url.includes(pattern);
     }
 
     /**
