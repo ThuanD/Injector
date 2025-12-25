@@ -388,6 +388,43 @@ styleSheet.textContent = \`
     }
 \`;
 document.head.appendChild(styleSheet);`
+    },
+
+    sendTelegram: {
+        name: "Send Telegram Notification",
+        description: "Send a message to Telegram using Bot API",
+        category: "Utility",
+        code: `// Send Telegram Notification
+// Replace with your actual credentials
+const BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE';
+const CHAT_ID = 'YOUR_CHAT_ID_HERE';
+
+/**
+ * Sends a message to Telegram (via Extension Bridge)
+ * @param {string} text - The message to send
+ */
+function sendToTelegram(text) {
+    if (BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
+        console.warn('Please set your Telegram Bot Token in the script');
+        return;
+    }
+
+    // Trigger bridge event (Main World -> Content Script -> Background)
+    const event = new CustomEvent('web-customizer-send-telegram', {
+        detail: {
+            botToken: BOT_TOKEN,
+            chatId: CHAT_ID,
+            message: text
+        }
+    });
+    window.dispatchEvent(event);
+    console.log('[Telegram] Notification request sent');
+}
+
+// Example: Send notification when page is loaded
+sendToTelegram('🔔 <b>Page loaded</b>\\n\\n' + 
+               '📌 Title: <code>' + document.title + '</code>\\n' + 
+               '🔗 URL: ' + window.location.href);`
     }
 };
 

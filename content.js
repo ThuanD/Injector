@@ -19,8 +19,25 @@ class ScriptRunner {
         this.scripts = {};
         this.executedScripts = new Set(); // Track executed scripts to prevent duplicates
         this.pendingExecutions = new Map(); // Debounce timers for each script
+        this.setupBridge();
         this.loadScripts();
         this.loadHiddenSettings();
+    }
+
+    /**
+     * Setup a bridge to allow scripts in the Main World to communicate with the extension
+     */
+    setupBridge() {
+        window.addEventListener('web-customizer-send-telegram', (event) => {
+            if (event.detail) {
+                chrome.runtime.sendMessage({
+                    action: 'sendTelegram',
+                    ...event.detail
+                }, (response) => {
+                    // Optional: send response back via another event if needed
+                });
+            }
+        });
     }
 
     /**
@@ -58,7 +75,7 @@ class ScriptRunner {
         Object.entries(this.scripts).forEach(([pattern, script]) => {
             if (script.enabled !== false && this.urlMatchesPattern(currentUrl, pattern)) {
                 const scriptKey = `${pattern}:${currentUrl}`;
-                
+
                 // Execute script with smart timing
                 this.scheduleExecution(scriptKey, script.code, pattern, script.name);
             }
@@ -117,7 +134,7 @@ class ScriptRunner {
                 this.executedScripts.delete(scriptKey); // Allow re-execution
                 this.executeScript(code, pattern, name);
                 this.executedScripts.add(scriptKey);
-                
+
                 // Prevent rapid re-executions
                 const cooldown = setTimeout(() => {
                     this.pendingExecutions.delete(rerunKey);
@@ -175,10 +192,10 @@ class ScriptRunner {
                 // 1. Escape special regex characters INCLUDING *
                 // We escape * so we can consistently target it for replacement
                 const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                
+
                 // 2. Convert escaped asterisk (\*) to regex wildcard (.*)
                 const regexString = '^' + escaped.replace(/\\\*/g, '.*') + '$';
-                
+
                 const regex = new RegExp(regexString);
                 return regex.test(url);
             }
@@ -254,7 +271,7 @@ class ScriptRunner {
             if (!s) return null;
             // If already a selector (starts with . or # or [), use it
             if (s.startsWith('.') || s.startsWith('#') || s.startsWith('[')) return s;
-            
+
             // Assume it's a class or list of classes
             // Split by space to handle "class1 class2" -> ".class1.class2"
             return '.' + s.split(/\s+/).join('.');
@@ -300,7 +317,7 @@ chrome.storage.local.onChanged.addListener((changes, namespace) => {
             scriptRunner.pendingExecutions.clear();
             scriptRunner.runScripts();
         }
-        
+
         if (changes.hiddenSettings) {
             const newSettings = changes.hiddenSettings.newValue || {};
             const hostSettings = newSettings[window.location.hostname];
