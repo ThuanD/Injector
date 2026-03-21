@@ -1,336 +1,318 @@
-/**
- * PopupManager - Chrome extension popup interface manager
- *
- * This class manages the popup UI that appears when users click the extension icon.
- * It handles:
- * - Displaying current site information
- * - Loading and filtering scripts for the current tab
- * - Script execution and toggling
- * - URL pattern matching for script targeting
- * - Real-time updates when scripts change
- *
- * Provides an intuitive interface for users to manage scripts for the current website.
- */
 class PopupManager {
-    /**
-     * Constructor - Initialize popup manager and start core functionality
-     * Sets up initial state and triggers essential setup methods
-     */
-    constructor() {
-        this.scripts = {};
-        this.currentTab = null;
-        this.init();
+  constructor() {
+    this.scripts = {};
+    this.currentTab = null;
+    this.activeTab = "scripts";
+    this.init();
+  }
+
+  async init() {
+    this.setupTabs();
+    this.setupBottomBar();
+    await this.loadTab();
+  }
+
+  /* ── TAB SWITCHING ── */
+  setupTabs() {
+    document.querySelectorAll(".tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const name = btn.dataset.tab;
+        this.switchTab(name);
+      });
+    });
+  }
+
+  switchTab(name) {
+    this.activeTab = name;
+    document
+      .querySelectorAll(".tab")
+      .forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+    document
+      .querySelectorAll(".panel")
+      .forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
+    const saveBtn = document.getElementById("saveHideBtn");
+    const addBtn = document.getElementById("addBtn");
+    const manageBtn = document.getElementById("manageBtn");
+    if (name === "hide") {
+      saveBtn.style.display = "flex";
+      addBtn.style.display = "none";
+      manageBtn.style.flex = "1";
+    } else {
+      saveBtn.style.display = "none";
+      addBtn.style.display = "flex";
+    }
+  }
+
+  /* ── BOTTOM BAR ── */
+  setupBottomBar() {
+    document.getElementById("manageBtn").addEventListener("click", () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+    });
+    document.getElementById("addBtn").addEventListener("click", () => {
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("options.html") + "?action=add",
+      });
+    });
+    document
+      .getElementById("saveHideBtn")
+      .addEventListener("click", () => this.saveHideSettings());
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      this.loadTab();
+      this.toast("Refreshed ↻", "success");
+    });
+    document.getElementById("settingsBtn").addEventListener("click", () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+    });
+  }
+
+  /* ── LOAD CURRENT TAB ── */
+  async loadTab() {
+    this.send({ action: "getActiveTab" }, async (res) => {
+      if (!res.tab) {
+        document.getElementById("siteUrl").textContent = "Cannot access page";
+        return;
+      }
+      this.currentTab = res.tab;
+      this.updateSiteBar();
+      await Promise.all([this.loadScripts(), this.loadHideSettings()]);
+    });
+  }
+
+  updateSiteBar() {
+    const url = this.currentTab?.url;
+    if (
+      !url ||
+      url.startsWith("chrome://") ||
+      url.startsWith("chrome-extension://")
+    ) {
+      document.getElementById("siteUrl").innerHTML = "<em>System page</em>";
+      return;
+    }
+    try {
+      const u = new URL(url);
+      document.getElementById("siteUrl").innerHTML =
+        `<strong>${u.hostname}</strong>${u.pathname !== "/" ? u.pathname.substring(0, 30) : ""}`;
+    } catch {
+      document.getElementById("siteUrl").textContent = url.substring(0, 50);
+    }
+  }
+
+  /* ── SCRIPTS ── */
+  async loadScripts() {
+    this.send({ action: "getScripts" }, (res) => {
+      this.scripts = res.scripts || {};
+      this.renderScripts();
+    });
+  }
+
+  renderScripts() {
+    const list = document.getElementById("scriptsList");
+    const url = this.currentTab?.url;
+
+    if (!url || url.startsWith("chrome://")) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔒</div><p>Scripts cannot run on system pages.</p></div>`;
+      this.updateCount(0);
+      return;
     }
 
-    /**
-     * Initialize popup functionality
-     * Coordinates initial setup of tab detection, event listeners, and auto-refresh
-     */
-    init() {
-        this.getCurrentTab();
-        this.setupEventListeners();
-        this.setupRefresh();
+    const matching = Object.entries(this.scripts)
+      .filter(([pattern]) => this.matchUrl(url, pattern))
+      .map(([pattern, s]) => ({ pattern, ...s }));
+
+    this.updateCount(matching.length);
+
+    if (matching.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No scripts for this site.</p>
+          <div class="empty-hint">Click "+ Add" to create one →</div>
+        </div>`;
+      return;
     }
 
-    /**
-     * Get information about the currently active tab
-     * Retrieves tab data from background script for site detection
-     */
-    async getCurrentTab() {
-        this.sendMessage({ action: 'getActiveTab' }, (response) => {
-            if (response.tab) {
-                this.currentTab = response.tab;
-                this.updateCurrentSite();
-                this.loadScripts();
-                this.loadHiddenSettings();
-            }
-        });
-    }
+    list.innerHTML = "";
+    matching.forEach((script, i) => {
+      const card = this.buildCard(script, i);
+      list.appendChild(card);
+    });
+  }
 
-    /**
-     * Load hidden element settings for current site
-     */
-    async loadHiddenSettings() {
-        if (!this.currentTab?.url) return;
-        const url = new URL(this.currentTab.url);
-        
-        this.sendMessage(
-            { action: 'getHiddenSettings', hostname: url.hostname },
-            (response) => {
-                const settings = response.settings || { enabled: false, selectors: '' };
-                document.getElementById('hideElementsToggle').checked = settings.enabled;
-                document.getElementById('hideElementsInput').value = settings.selectors || '';
-            }
-        );
-    }
+  updateCount(n) {
+    document.getElementById("scriptBadge").textContent =
+      `${n} script${n !== 1 ? "s" : ""}`;
+    document.getElementById("tabCount").textContent = n;
+  }
 
-    /**
-     * Save hidden element settings
-     */
-    saveHiddenSettings() {
-        if (!this.currentTab?.url) return;
-        const url = new URL(this.currentTab.url);
-        
-        const enabled = document.getElementById('hideElementsToggle').checked;
-        const selectors = document.getElementById('hideElementsInput').value;
+  buildCard(script, index) {
+    const enabled = script.enabled !== false;
+    const div = document.createElement("div");
+    div.className = `script-card${enabled ? "" : " disabled"}`;
+    div.style.animationDelay = `${index * 40}ms`;
 
-        this.sendMessage(
-            { 
-                action: 'saveHiddenSettings', 
-                hostname: url.hostname,
-                settings: { enabled, selectors }
-            },
-            (response) => {
-                if (response.success) {
-                    const btn = document.getElementById('saveHiddenBtn');
-                    const originalText = btn.textContent;
-                    btn.textContent = 'Saved!';
-                    btn.style.background = '#10b981';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.background = '';
-                    }, 1500);
-                    
-                    // Reload page to apply changes
-                    chrome.tabs.reload(this.currentTab.id);
-                }
-            }
-        );
-    }
+    div.innerHTML = `
+      <div class="script-card-top">
+        <div class="script-status ${enabled ? "" : "off"}"></div>
+        <div class="script-name">${this.esc(script.name)}</div>
+        <div class="toggle-wrap">
+          <input type="checkbox" class="toggle" ${enabled ? "checked" : ""} title="Enable / disable">
+        </div>
+      </div>
+      <div class="script-desc">${this.esc(script.description || "No description")}</div>
+      <div class="script-actions">
+        <button class="action-btn run" title="Run now">▶ Run</button>
+        <button class="action-btn edit" title="Edit script">✏ Edit</button>
+        <button class="action-btn copy" title="Copy code">⎘ Copy</button>
+      </div>
+    `;
 
-    /**
-     * Update the displayed current site information
-     * Shows hostname and port of the active tab's URL
-     */
-    updateCurrentSite() {
-        const el = document.getElementById('currentSite');
-        if (this.currentTab?.url) {
-            const url = new URL(this.currentTab.url);
-            el.textContent = `${url.hostname}${url.port ? ':' + url.port : ''}`;
+    const toggle = div.querySelector(".toggle");
+    toggle.addEventListener("change", () =>
+      this.toggleScript(script.pattern, toggle.checked, div),
+    );
+
+    div
+      .querySelector(".run")
+      .addEventListener("click", (e) =>
+        this.runScript(script, e.currentTarget),
+      );
+    div.querySelector(".edit").addEventListener("click", () => {
+      chrome.tabs.create({
+        url:
+          chrome.runtime.getURL("options.html") +
+          "?edit=" +
+          encodeURIComponent(script.pattern),
+      });
+    });
+    div.querySelector(".copy").addEventListener("click", () => {
+      navigator.clipboard
+        .writeText(script.code || "")
+        .then(() => this.toast("Code copied!", "success"));
+    });
+
+    return div;
+  }
+
+  toggleScript(pattern, enabled, cardEl) {
+    cardEl.classList.toggle("disabled", !enabled);
+    cardEl.querySelector(".script-status").classList.toggle("off", !enabled);
+    this.send({ action: "toggleScript", scriptId: pattern, enabled }, () => {
+      this.toast(
+        enabled ? "Script enabled ✓" : "Script disabled",
+        enabled ? "success" : "",
+      );
+    });
+  }
+
+  runScript(script, btn) {
+    if (!this.currentTab) return;
+    btn.textContent = "⌛ Running…";
+    btn.disabled = true;
+    this.send(
+      {
+        action: "executeScriptInMainWorld",
+        tabId: this.currentTab.id,
+        code: script.code,
+        scriptId: script.pattern,
+      },
+      (res) => {
+        btn.disabled = false;
+        if (res.error) {
+          btn.textContent = "✗ Error";
+          this.toast("Run failed: " + res.error, "error");
+          setTimeout(() => {
+            btn.textContent = "▶ Run";
+          }, 2000);
         } else {
-            el.textContent = 'Unable to detect site';
+          btn.textContent = "✓ Done";
+          btn.classList.add("run-success");
+          this.toast(`"${script.name}" executed ✓`, "success");
+          setTimeout(() => {
+            btn.textContent = "▶ Run";
+            btn.classList.remove("run-success");
+          }, 2000);
         }
+      },
+    );
+  }
+
+  /* ── HIDE ELEMENTS ── */
+  async loadHideSettings() {
+    if (!this.currentTab?.url) return;
+    try {
+      const { hostname } = new URL(this.currentTab.url);
+      this.send({ action: "getHiddenSettings", hostname }, (res) => {
+        const s = res.settings || { enabled: false, selectors: "" };
+        document.getElementById("hideToggle").checked = !!s.enabled;
+        document.getElementById("hideInput").value = s.selectors || "";
+      });
+    } catch {}
+  }
+
+  saveHideSettings() {
+    if (!this.currentTab?.url) return;
+    try {
+      const { hostname } = new URL(this.currentTab.url);
+      const enabled = document.getElementById("hideToggle").checked;
+      const selectors = document.getElementById("hideInput").value.trim();
+      this.send(
+        {
+          action: "saveHiddenSettings",
+          hostname,
+          settings: { enabled, selectors },
+        },
+        (res) => {
+          if (res.success) {
+            this.toast("Saved! Reloading page…", "success");
+            setTimeout(() => chrome.tabs.reload(this.currentTab.id), 700);
+          }
+        },
+      );
+    } catch {}
+  }
+
+  /* ── URL MATCHING ── */
+  matchUrl(url, pattern) {
+    try {
+      if (!pattern) return false;
+      if (pattern === "*") return true;
+      if (pattern.includes("*")) {
+        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp("^" + escaped.replace(/\\\*/g, ".*") + "$").test(url);
+      }
+      return url.includes(pattern);
+    } catch {
+      return false;
     }
+  }
 
-    /**
-     * Load all user scripts from storage
-     * Retrieves scripts via background script and renders matching ones
-     */
-    async loadScripts() {
-        this.sendMessage({ action: 'getScripts' }, (response) => {
-            if (response.scripts) {
-                this.scripts = response.scripts;
-                this.renderScripts();
-            }
-        });
-    }
+  /* ── HELPERS ── */
+  send(msg, cb) {
+    chrome.runtime.sendMessage(msg, (res) => {
+      if (chrome.runtime.lastError)
+        console.warn(chrome.runtime.lastError.message);
+      cb(res || {});
+    });
+  }
 
-    /**
-     * Render scripts that match the current tab's URL
-     * Filters scripts by URL pattern and displays them in the popup
-     */
-    renderScripts() {
-        const container = document.getElementById('scriptsList');
+  esc(t) {
+    const d = document.createElement("div");
+    d.textContent = String(t ?? "");
+    return d.innerHTML;
+  }
 
-        if (!this.currentTab?.url) {
-            container.innerHTML = '<div class="no-scripts">Cannot access current site</div>';
-            return;
-        }
-
-        const matching = this.getMatchingScripts(this.currentTab.url);
-
-        if (matching.length === 0) {
-            container.innerHTML = '<div class="no-scripts">No scripts for this site</div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        matching.forEach(script => {
-            container.appendChild(this.createScriptElement(script));
-        });
-    }
-
-    /**
-     * Find scripts that match the current tab's URL
-     * Filters all scripts by URL pattern matching
-     *
-     * @param {string} url - Current tab URL to match against
-     * @returns {Array} Array of matching scripts with their patterns
-     */
-    getMatchingScripts(url) {
-        return Object.entries(this.scripts)
-            .filter(([pattern]) => this.urlMatchesPattern(url, pattern))
-            .map(([pattern, script]) => ({ pattern, ...script }));
-    }
-
-    /**
-     * Check if URL matches a script's pattern
-     * Supports wildcard patterns for flexible domain matching
-     *
-     * @param {string} url - Current page URL
-     * @param {string} pattern - Script URL pattern to match against
-     * @returns {boolean} True if URL matches the pattern
-     */
-    urlMatchesPattern(url, pattern) {
-        try {
-            if (!pattern) return false;
-            if (pattern === '*') return true;
-
-            // Handle wildcard patterns
-            if (pattern.includes('*')) {
-                // Escape special regex characters INCLUDING *
-                // We escape * to \* so we can safely identify it and replace it with .*
-                const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                
-                // Convert escaped asterisk (\*) to regex wildcard (.*)
-                const regexString = '^' + escaped.replace(/\\\*/g, '.*') + '$';
-                
-                const regex = new RegExp(regexString);
-                return regex.test(url);
-            }
-
-            return url.includes(pattern);
-        } catch (error) {
-            console.warn('URL matching error:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Create HTML element for a script in the popup
-     * Generates interactive script card with toggle, run, and edit buttons
-     *
-     * @param {Object} script - Script object with pattern, name, description, etc.
-     * @returns {HTMLElement} Script element ready for DOM insertion
-     */
-    createScriptElement(script) {
-        const div = document.createElement('div');
-        div.className = 'script-item';
-
-        const enabled = script.enabled !== false;
-
-        div.innerHTML = `
-            <div class="script-header">
-                <div class="script-name">${this.escapeHtml(script.name)}</div>
-                <button class="script-toggle ${enabled ? 'enabled' : ''}" data-pattern="${script.pattern}" 
-                    title="${enabled ? 'Click to disable' : 'Click to enable'}"></button>
-            </div>
-            <div class="script-desc">${this.escapeHtml(script.description || 'No description')}</div>
-            <div class="script-actions">
-                <button class="btn-primary run-btn" data-pattern="${script.pattern}">▶ Run Now</button>
-                <button class="btn-secondary edit-btn" data-pattern="${script.pattern}">Edit</button>
-            </div>
-        `;
-
-        div.querySelector('.script-toggle').addEventListener('click', () => {
-            this.toggleScript(script.pattern, !enabled);
-        });
-
-        div.querySelector('.run-btn').addEventListener('click', () => {
-            this.runScript(script.pattern, script.code);
-        });
-
-        div.querySelector('.edit-btn').addEventListener('click', () => {
-            chrome.tabs.create({ url: chrome.runtime.getURL('options.html') + '?edit=' + encodeURIComponent(script.pattern) });
-        });
-
-        return div;
-    }
-
-    /**
-     * Toggle script enabled/disabled state
-     * Updates script status in storage and refreshes display
-     *
-     * @param {string} pattern - Script URL pattern
-     * @param {boolean} enabled - New enabled state
-     */
-    toggleScript(pattern, enabled) {
-        this.sendMessage(
-            { action: 'toggleScript', scriptId: pattern, enabled },
-            () => this.loadScripts()
-        );
-    }
-
-    /**
-     * Execute script immediately on current tab
-     * Sends script code to background script for execution
-     *
-     * @param {string} pattern - Script URL pattern
-     * @param {string} code - JavaScript code to execute
-     */
-    runScript(pattern, code) {
-        if (!this.currentTab) return;
-
-        this.sendMessage(
-            {
-                action: 'executeScriptInMainWorld',
-                tabId: this.currentTab.id,
-                code: code,
-                scriptId: pattern
-            },
-            (response) => {
-                if (response.error) {
-                    console.error('Execution failed:', response.error);
-                    alert('Script execution failed: ' + response.error);
-                } else {
-                    console.log('Script executed successfully');
-                }
-            }
-        );
-    }
-
-    /**
-     * Set up click handlers for popup buttons
-     * Handles navigation to script management page
-     */
-    setupEventListeners() {
-        document.getElementById('manageScripts').addEventListener('click', () => {
-            chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
-        });
-
-        document.getElementById('saveHiddenBtn').addEventListener('click', () => {
-            this.saveHiddenSettings();
-        });
-    }
-
-    /**
-     * Set up automatic refresh when scripts are modified
-     * Listens for storage changes to update popup in real-time
-     */
-    setupRefresh() {
-        chrome.storage.local.onChanged.addListener(() => {
-            this.loadScripts();
-        });
-    }
-
-    /**
-     * Send message to background script
-     * Wrapper for chrome.runtime.sendMessage with error handling
-     *
-     * @param {Object} message - Message object to send
-     * @param {Function} callback - Callback function for response
-     */
-    sendMessage(message, callback) {
-        chrome.runtime.sendMessage(message, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error('Message error:', chrome.runtime.lastError);
-            }
-            callback(response || {});
-        });
-    }
-
-    /**
-     * Escape HTML characters to prevent XSS
-     * Safely renders user-provided content in HTML
-     *
-     * @param {string} text - Text to escape
-     * @returns {string} HTML-safe text
-     */
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+  toast(msg, type = "", duration = 2200) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = `toast show${type ? " " + type : ""}`;
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => el.classList.remove("show"), duration);
+  }
 }
 
-const popupManager = new PopupManager();
+/* auto-refresh when storage changes */
+chrome.storage.local.onChanged.addListener(() => {
+  if (window._pm) window._pm.loadScripts();
+});
+
+window._pm = new PopupManager();

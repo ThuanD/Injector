@@ -1,434 +1,1236 @@
-// Script Templates for Web Customizer
-// Common script templates for users to quickly use/modify
+// ============================================================
+// WebCustom — Script Templates
+// ============================================================
 
 const SCRIPT_TEMPLATES = {
-    removeById: {
-        name: "Remove Elements by ID Pattern",
-        description: "Remove elements with IDs containing specific text patterns",
-        category: "DOM Manipulation",
-        code: `// Remove elements with IDs containing "ads" or "banner"
-const patterns = ['ads', 'banner', 'popup'];
 
-patterns.forEach(pattern => {
-    document.querySelectorAll('[id*="' + pattern + '"]').forEach(el => {
-        console.log('Removed element with ID:', el.id);
+  // ══════════════════════════════════════════
+  // 🧹 DOM CLEANUP
+  // ══════════════════════════════════════════
+
+  removeAds: {
+    name: "Remove Ads & Banners",
+    description: "Xóa quảng cáo, banner, popup phổ biến trên hầu hết các trang web.",
+    category: "🧹 DOM Cleanup",
+    code: `(function removeAds() {
+  const adSelectors = [
+    '[id*="ad-"]', '[id*="-ad"]', '[id*="_ad"]',
+    '[id*="ads"]', '[id*="banner"]', '[id*="popup"]',
+    '[class*="advert"]', '[class*="ads-"]', '[class*="-ads"]',
+    '[class*="ad-container"]', '[class*="ad-wrapper"]',
+    '[class*="banner-ads"]', '[class*="sponsored"]',
+    '[class*="promo-banner"]', '[class*="sticky-ad"]',
+    '[data-ad]', '[data-ad-slot]', '[data-google-query-id]',
+    'ins.adsbygoogle',
+    '.widget-area aside[class*="ad"]',
+  ];
+
+  let removed = 0;
+  adSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.remove();
+      removed++;
+    });
+  });
+
+  // Theo dõi và xóa ad được inject động
+  const observer = new MutationObserver(() => {
+    adSelectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
         el.remove();
+      });
     });
-});`
-    },
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
-    removeByClass: {
-        name: "Remove Elements by Class Pattern",
-        description: "Remove elements with classes containing specific text patterns",
-        category: "DOM Manipulation",
-        code: `// Remove elements with classes containing "advertisement" or "sponsored"
-const patterns = ['advertisement', 'sponsored', 'promo'];
+  console.log('[WebCustom] Removed ' + removed + ' ad elements');
+})();`
+  },
 
-patterns.forEach(pattern => {
-    document.querySelectorAll('[class*="' + pattern + '"]').forEach(el => {
-        console.log('Removed element with class:', el.className);
+  removePaywall: {
+    name: "Remove Paywall & Overlay",
+    description: "Xóa paywall, overlay đăng ký, popup chặn nội dung và khôi phục scroll.",
+    category: "🧹 DOM Cleanup",
+    code: `(function removePaywall() {
+  const overlaySelectors = [
+    '[class*="paywall"]', '[class*="pay-wall"]',
+    '[class*="subscription"]', '[id*="paywall"]',
+    '[class*="overlay"]', '[id*="overlay"]',
+    '[class*="modal-backdrop"]', '[class*="blur-overlay"]',
+    '[class*="article-locked"]', '[class*="content-gate"]',
+    '[class*="cookie-banner"]', '[id*="cookie"]',
+    '[class*="newsletter-popup"]', '[class*="signup-wall"]',
+  ];
+
+  overlaySelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => el.remove());
+  });
+
+  // Khôi phục scroll
+  const restore = (el) => {
+    el.style.overflow   = '';
+    el.style.overflowY  = '';
+    el.style.position   = '';
+    el.style.maxHeight  = '';
+  };
+  restore(document.body);
+  restore(document.documentElement);
+
+  // Xóa class chặn scroll thường gặp
+  ['modal-open', 'overflow-hidden', 'noscroll', 'no-scroll', 'body-locked']
+    .forEach(c => document.body.classList.remove(c));
+
+  // Khôi phục nội dung bị blur/mờ
+  document.querySelectorAll('[class*="blur"], [style*="blur"]').forEach(el => {
+    el.style.filter = '';
+    el.style.webkitFilter = '';
+  });
+
+  console.log('[WebCustom] Paywall removed, scroll restored');
+})();`
+  },
+
+  removeStickyHeaders: {
+    name: "Remove Sticky Headers & Floating Bars",
+    description: "Xóa các thanh header/footer dính (sticky/fixed) hay che nội dung khi scroll.",
+    category: "🧹 DOM Cleanup",
+    code: `(function removeStickyBars() {
+  let removed = 0;
+
+  document.querySelectorAll('*').forEach(el => {
+    const style = window.getComputedStyle(el);
+    const pos   = style.position;
+    const tag   = el.tagName.toLowerCase();
+
+    if ((pos === 'fixed' || pos === 'sticky') && tag !== 'body' && tag !== 'html') {
+      const rect = el.getBoundingClientRect();
+      // Chỉ xóa bar nằm ở trên cùng hoặc dưới cùng, không phải sidebar
+      const isTopBar    = rect.top <= 10 && rect.width > window.innerWidth * 0.4;
+      const isBottomBar = rect.bottom >= window.innerHeight - 10 && rect.width > window.innerWidth * 0.4;
+
+      if (isTopBar || isBottomBar) {
         el.remove();
+        removed++;
+      }
+    }
+  });
+
+  // Thêm padding-top bị mất do xóa header
+  document.body.style.paddingTop = '0';
+  document.body.style.marginTop  = '0';
+
+  console.log('[WebCustom] Removed ' + removed + ' sticky bars');
+})();`
+  },
+
+  cleanYouTube: {
+    name: "Clean YouTube UI",
+    description: "Ẩn sidebar Shorts, gợi ý video phiền nhiễu, thanh end-screen, làm YouTube gọn gàng hơn.",
+    category: "🧹 DOM Cleanup",
+    code: `(function cleanYouTube() {
+  const css = \`
+    /* Ẩn Shorts trong sidebar */
+    ytd-guide-entry-renderer a[href="/shorts"],
+    ytd-mini-guide-entry-renderer a[href="/shorts"] { display: none !important; }
+
+    /* Ẩn section Shorts trên trang chủ */
+    ytd-rich-section-renderer { display: none !important; }
+
+    /* Ẩn gợi ý cuối video (end screen) */
+    .ytp-endscreen-content { display: none !important; }
+
+    /* Ẩn cards (i button) */
+    .ytp-cards-teaser, .ytp-ce-element { display: none !important; }
+
+    /* Ẩn quảng cáo banner bên phải */
+    #masthead-ad, ytd-banner-promo-renderer,
+    ytd-statement-banner-renderer { display: none !important; }
+
+    /* Ẩn Promoted video trong search */
+    ytd-search-pyv-renderer { display: none !important; }
+
+    /* Thu hẹp sidebar để xem video rộng hơn */
+    ytd-watch-flexy[theater] #secondary { display: none !important; }
+  \`;
+
+  const style = document.createElement('style');
+  style.id = 'webcustom-yt-clean';
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  // Auto skip ads
+  function skipAd() {
+    const skip = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button');
+    if (skip) { skip.click(); return; }
+
+    const ad = document.querySelector('.ad-showing');
+    if (ad) {
+      const video = document.querySelector('video');
+      if (video) video.currentTime = video.duration;
+    }
+  }
+  setInterval(skipAd, 800);
+
+  console.log('[WebCustom] YouTube cleaned');
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // ⚡ PRODUCTIVITY
+  // ══════════════════════════════════════════
+
+  focusMode: {
+    name: "Focus / Reading Mode",
+    description: "Chỉ hiển thị nội dung chính của bài viết, ẩn mọi thứ xung quanh. Giúp đọc tập trung hơn.",
+    category: "⚡ Productivity",
+    code: `(function focusMode() {
+  // Tìm vùng nội dung chính
+  const contentCandidates = [
+    'article', 'main', '[role="main"]',
+    '.post-content', '.article-content', '.entry-content',
+    '.article-body', '.story-body', '.post-body',
+    '#content', '#main-content', '#article-content',
+  ];
+
+  let content = null;
+  for (const sel of contentCandidates) {
+    const el = document.querySelector(sel);
+    if (el && el.innerText.length > 500) {
+      content = el;
+      break;
+    }
+  }
+
+  if (!content) {
+    // Fallback: chọn element có text dài nhất
+    let maxLen = 0;
+    document.querySelectorAll('div, section').forEach(el => {
+      if (el.innerText.length > maxLen) {
+        maxLen = el.innerText.length;
+        content = el;
+      }
     });
-});`
-    },
+  }
 
-    hideElements: {
-        name: "Hide Elements by Selector",
-        description: "Hide elements by CSS selector",
-        category: "DOM Manipulation",
-        code: `// Hide elements by selector
-const selectors = [
-    '.sidebar-ads',
-    '#popup-modal',
-    '[data-ad-slot]'
-];
+  if (!content) {
+    console.warn('[WebCustom] Could not find main content');
+    return;
+  }
 
-selectors.forEach(selector => {
-    document.querySelectorAll(selector).forEach(el => {
-        el.style.display = 'none';
-        console.log('Hidden element:', selector);
-    });
-});`
-    },
+  // Clone và hiển thị nội dung trong overlay
+  const clone = content.cloneNode(true);
+  const overlay = document.createElement('div');
+  overlay.id = 'webcustom-focus';
+  overlay.style.cssText = \`
+    position: fixed; inset: 0; z-index: 999999;
+    background: #fafaf8;
+    overflow-y: auto;
+    padding: 60px 0 80px;
+  \`;
 
-    autoClickButton: {
-        name: "Auto Click Button",
-        description: "Automatically click buttons/links when page loads",
-        category: "Automation",
-        code: `// Automatically click button after page loads
-function autoClick() {
-    const button = document.querySelector('button.accept-cookies'); // Change selector
-    if (button) {
-        button.click();
-        console.log('Auto-clicked button');
-        return true;
+  const inner = document.createElement('div');
+  inner.style.cssText = \`
+    max-width: 720px; margin: 0 auto;
+    padding: 0 32px;
+    font-family: Georgia, serif;
+    font-size: 19px; line-height: 1.85;
+    color: #1a1a1a;
+  \`;
+  inner.appendChild(clone);
+
+  // Nút thoát
+  const exitBtn = document.createElement('button');
+  exitBtn.textContent = '✕ Exit Focus Mode';
+  exitBtn.style.cssText = \`
+    position: fixed; top: 16px; right: 20px;
+    background: #1a1a1a; color: white;
+    border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px;
+    cursor: pointer; z-index: 1000000;
+  \`;
+  exitBtn.onclick = () => overlay.remove();
+
+  overlay.appendChild(inner);
+  overlay.appendChild(exitBtn);
+  document.body.appendChild(overlay);
+
+  // Thoát bằng ESC
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') overlay.remove();
+  }, { once: true });
+})();`
+  },
+
+  autoFillForms: {
+    name: "Auto Fill Forms",
+    description: "Tự động điền thông tin cá nhân vào form. Chỉnh sửa biến config bên dưới trước khi dùng.",
+    category: "⚡ Productivity",
+    code: `(function autoFillForms() {
+  // ── Chỉnh thông tin của bạn ở đây ──
+  const INFO = {
+    firstName : 'Nguyen',
+    lastName  : 'Van A',
+    fullName  : 'Nguyen Van A',
+    email     : 'your@email.com',
+    phone     : '0901234567',
+    address   : '123 Nguyen Trai, Hanoi',
+    city      : 'Hanoi',
+    country   : 'Vietnam',
+    zipCode   : '100000',
+    company   : 'My Company',
+    website   : 'https://example.com',
+  };
+
+  // Map keyword → giá trị
+  const RULES = [
+    { keys: ['firstname', 'first-name', 'first_name', 'fname'], value: INFO.firstName },
+    { keys: ['lastname', 'last-name', 'last_name', 'lname'],    value: INFO.lastName },
+    { keys: ['fullname', 'full-name', 'full_name', 'name'],     value: INFO.fullName },
+    { keys: ['email', 'e-mail', 'mail'],                         value: INFO.email },
+    { keys: ['phone', 'tel', 'mobile', 'cell'],                  value: INFO.phone },
+    { keys: ['address', 'street', 'addr'],                       value: INFO.address },
+    { keys: ['city', 'town'],                                    value: INFO.city },
+    { keys: ['country', 'nation'],                               value: INFO.country },
+    { keys: ['zip', 'postal', 'postcode'],                       value: INFO.zipCode },
+    { keys: ['company', 'organization', 'employer'],             value: INFO.company },
+    { keys: ['website', 'url', 'homepage'],                      value: INFO.website },
+  ];
+
+  let filled = 0;
+  document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input:not([type])').forEach(input => {
+    const id    = (input.id || '').toLowerCase();
+    const name  = (input.name || '').toLowerCase();
+    const ph    = (input.placeholder || '').toLowerCase();
+    const label = (document.querySelector('label[for="' + input.id + '"]')?.textContent || '').toLowerCase();
+    const combined = [id, name, ph, label].join(' ');
+
+    for (const rule of RULES) {
+      if (rule.keys.some(k => combined.includes(k))) {
+        input.value = rule.value;
+        input.dispatchEvent(new Event('input',  { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        filled++;
+        break;
+      }
     }
-    return false;
-}
+  });
 
-// Try clicking immediately
-if (!autoClick()) {
-    // If button not found, wait 2 seconds and try again
-    setTimeout(autoClick, 2000);
-}`
-    },
+  console.log('[WebCustom] Filled ' + filled + ' fields');
+})();`
+  },
 
-    autoFillForm: {
-        name: "Auto Fill Form Fields",
-        description: "Automatically fill form information",
-        category: "Automation",
-        code: `// Automatically fill form
-const formData = {
-    '#email': 'your-email@example.com',
-    '#username': 'your-username',
-    'input[name="phone"]': '0123456789'
-};
+  tableOfContents: {
+    name: "Generate Table of Contents",
+    description: "Tự động tạo mục lục nổi từ các heading (h1–h3) của bài viết, có thể click để nhảy đến phần đó.",
+    category: "⚡ Productivity",
+    code: `(function generateTOC() {
+  const headings = document.querySelectorAll('h1, h2, h3');
+  if (headings.length < 3) {
+    console.log('[WebCustom] Not enough headings for TOC');
+    return;
+  }
 
-Object.entries(formData).forEach(([selector, value]) => {
-    const field = document.querySelector(selector);
-    if (field) {
-        field.value = value;
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        console.log('Filled field:', selector);
-    }
-});`
-    },
+  // Gán id cho từng heading nếu chưa có
+  headings.forEach((h, i) => {
+    if (!h.id) h.id = 'wc-section-' + i;
+  });
 
-    modifyText: {
-        name: "Replace Text Content",
-        description: "Replace text content on the page",
-        category: "Content Modification",
-        code: `// Replace text on the page
-const replacements = {
-    'Old Text': 'New Text',
-    'Price: $99': 'Price: $0',
-    'Subscribe': 'No Thanks'
-};
+  // Build HTML
+  const items = Array.from(headings).map(h => {
+    const level   = parseInt(h.tagName[1]);
+    const indent  = (level - 1) * 14;
+    const size    = level === 1 ? '13px' : level === 2 ? '12.5px' : '12px';
+    const weight  = level === 1 ? '600' : '400';
+    return \`<div style="padding:3px 0 3px \${indent}px">
+      <a href="#\${h.id}" style="color:#3dd6f5;text-decoration:none;font-size:\${size};font-weight:\${weight};line-height:1.4;display:block;opacity:.85"
+         onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.85">
+        \${h.innerText.trim()}
+      </a>
+    </div>\`;
+  }).join('');
 
-function replaceText(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-        let text = node.textContent;
-        Object.entries(replacements).forEach(([oldText, newText]) => {
-            text = text.replace(new RegExp(oldText, 'gi'), newText);
-        });
-        if (text !== node.textContent) {
-            node.textContent = text;
-        }
-    } else {
-        node.childNodes.forEach(replaceText);
-    }
-}
+  const toc = document.createElement('div');
+  toc.id    = 'webcustom-toc';
+  toc.innerHTML = \`
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5a6480;margin-bottom:10px">
+      📋 Table of Contents
+    </div>
+    \${items}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+      <span id="wc-toc-close" style="font-size:11px;color:#5a6480;cursor:pointer">✕ Close</span>
+    </div>
+  \`;
+  toc.style.cssText = \`
+    position: fixed; top: 80px; right: 20px;
+    width: 240px; max-height: 70vh; overflow-y: auto;
+    background: #141720; border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 16px;
+    z-index: 99999; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    scrollbar-width: thin;
+  \`;
 
-replaceText(document.body);
-console.log('Text replacement completed');`
-    },
+  document.body.appendChild(toc);
+  document.getElementById('wc-toc-close').onclick = () => toc.remove();
+})();`
+  },
 
-    addCustomCSS: {
-        name: "Inject Custom CSS",
-        description: "Add custom CSS to the page",
-        category: "Styling",
-        code: `// Add custom CSS
-const customCSS = \`
-    /* Hide ads */
-    .ad-container { display: none !important; }
-    
-    /* Change background color */
-    body { background-color: #f5f5f5 !important; }
-    
-    /* Customize font */
-    * { font-family: 'Arial', sans-serif !important; }
-\`;
+  wordCounter: {
+    name: "Word & Read Time Counter",
+    description: "Hiển thị số từ, số ký tự và thời gian đọc ước tính của bài viết ngay trên trang.",
+    category: "⚡ Productivity",
+    code: `(function wordCounter() {
+  // Lấy nội dung văn bản chính
+  const contentEls = ['article', 'main', '.post-content', '.article-content', '.entry-content', '#content'];
+  let text = '';
+  for (const sel of contentEls) {
+    const el = document.querySelector(sel);
+    if (el && el.innerText.length > 200) { text = el.innerText; break; }
+  }
+  if (!text) text = document.body.innerText;
 
-const style = document.createElement('style');
-style.textContent = customCSS;
-document.head.appendChild(style);
-console.log('Custom CSS injected');`
-    },
+  const words   = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  const chars   = text.replace(/\s/g, '').length;
+  const minutes = Math.ceil(words / 200); // tốc độ đọc trung bình 200 wpm
 
-    darkMode: {
-        name: "Force Dark Mode",
-        description: "Enable dark mode for any website",
-        category: "Styling",
-        code: `// Force dark mode
-const darkModeCSS = \`
+  const badge = document.createElement('div');
+  badge.style.cssText = \`
+    position: fixed; bottom: 20px; right: 20px;
+    background: #141720; border: 1px solid rgba(61,214,245,.25);
+    border-radius: 10px; padding: 12px 16px;
+    z-index: 99999; font-family: system-ui, sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  \`;
+  badge.innerHTML = \`
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a6480;margin-bottom:8px">Article Stats</div>
+    <div style="display:flex;gap:16px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#3dd6f5;line-height:1">\${words.toLocaleString()}</div>
+        <div style="font-size:10px;color:#5a6480;margin-top:2px">words</div>
+      </div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#7c6cf8;line-height:1">\${chars.toLocaleString()}</div>
+        <div style="font-size:10px;color:#5a6480;margin-top:2px">chars</div>
+      </div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#2dd4a0;line-height:1">\${minutes}</div>
+        <div style="font-size:10px;color:#5a6480;margin-top:2px">min read</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:#5a6480;cursor:pointer;text-align:right" id="wc-close">✕ Close</div>
+  \`;
+  document.body.appendChild(badge);
+  document.getElementById('wc-close').onclick = () => badge.remove();
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 🎨 STYLING
+  // ══════════════════════════════════════════
+
+  darkMode: {
+    name: "Force Dark Mode",
+    description: "Bật dark mode cho bất kỳ trang nào bằng CSS filter invert. Ảnh và video được giữ nguyên màu.",
+    category: "🎨 Styling",
+    code: `(function forceDarkMode() {
+  const id = 'webcustom-darkmode';
+  if (document.getElementById(id)) {
+    document.getElementById(id).remove();
+    document.documentElement.style.colorScheme = '';
+    console.log('[WebCustom] Dark mode OFF');
+    return;
+  }
+
+  const css = \`
     html {
-        filter: invert(1) hue-rotate(180deg);
-        background-color: #000 !important;
+      filter: invert(1) hue-rotate(180deg) !important;
+      color-scheme: dark !important;
+      background-color: #000 !important;
     }
-    
-    img, video, [style*="background-image"] {
-        filter: invert(1) hue-rotate(180deg);
+    img, video, canvas, iframe,
+    [style*="background-image"],
+    svg image {
+      filter: invert(1) hue-rotate(180deg) !important;
     }
-\`;
+    /* Giữ màu logo, icon thương hiệu */
+    [class*="logo"] img,
+    [class*="avatar"] img,
+    [class*="brand"] img { filter: none !important; }
+  \`;
 
-const style = document.createElement('style');
-style.textContent = darkModeCSS;
-document.head.appendChild(style);
-console.log('Dark mode enabled');`
-    },
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
+  document.documentElement.style.colorScheme = 'dark';
 
-    removeOverlay: {
-        name: "Remove Overlay/Paywall",
-        description: "Remove overlay and enable scrolling",
-        category: "DOM Manipulation",
-        code: `// Remove overlay and enable scroll
-// Remove common overlays
-const overlaySelectors = [
-    '.modal-backdrop',
-    '.overlay',
-    '[class*="paywall"]',
-    '[id*="overlay"]'
-];
+  console.log('[WebCustom] Dark mode ON (press the button again to toggle OFF)');
+})();`
+  },
 
-overlaySelectors.forEach(selector => {
-    document.querySelectorAll(selector).forEach(el => el.remove());
-});
+  customFont: {
+    name: "Change Page Font",
+    description: "Thay font chữ của toàn bộ trang sang font dễ đọc hơn. Có thể chỉnh trong config.",
+    category: "🎨 Styling",
+    code: `(function changeFont() {
+  // ── Chọn font theo ý thích ──
+  // Một số gợi ý: 'Georgia', 'Palatino', 'Tahoma', 'Verdana'
+  // Hoặc Google Fonts: 'Inter', 'Lora', 'Source Sans Pro', 'Merriweather'
+  const FONT_NAME    = 'Georgia';
+  const FONT_SIZE    = '17px';
+  const LINE_HEIGHT  = '1.8';
+  const USE_GOOGLE   = false; // Đặt true nếu muốn load từ Google Fonts
+  const GOOGLE_URL   = 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&display=swap';
 
-// Enable scroll
-document.body.style.overflow = 'auto';
-document.documentElement.style.overflow = 'auto';
+  if (USE_GOOGLE) {
+    const link = document.createElement('link');
+    link.rel  = 'stylesheet';
+    link.href = GOOGLE_URL;
+    document.head.appendChild(link);
+  }
 
-// Remove inline styles that block scrolling
-document.querySelectorAll('[style*="overflow"]').forEach(el => {
-    el.style.overflow = 'auto';
-});
-
-console.log('Overlay removed, scroll enabled');`
-    },
-
-    downloadImages: {
-        name: "Download All Images",
-        description: "Download all images on the page",
-        category: "Utility",
-        code: `// Download all images
-const images = document.querySelectorAll('img');
-let count = 0;
-
-images.forEach((img, index) => {
-    if (img.src && !img.src.startsWith('data:')) {
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = img.src;
-            a.download = \`image-\${index + 1}.jpg\`;
-            a.click();
-        }, index * 200); // Add delay to prevent browser blocking
-        count++;
+  const css = \`
+    body, p, li, td, th, div, span, article, section {
+      font-family: '\${FONT_NAME}', serif !important;
+      font-size: \${FONT_SIZE} !important;
+      line-height: \${LINE_HEIGHT} !important;
     }
-});
-
-console.log(\`Downloaded \${count} images\`);
-alert(\`Started downloading \${count} images\`);`
-    },
-
-    copyAllLinks: {
-        name: "Copy All Links",
-        description: "Copy all links on the page",
-        category: "Utility",
-        code: `// Copy all links
-const links = Array.from(document.querySelectorAll('a[href]'))
-    .map(a => a.href)
-    .filter(href => href.startsWith('http'))
-    .join('\\n');
-
-navigator.clipboard.writeText(links).then(() => {
-    const count = links.split('\\n').length;
-    console.log(\`Copied \${count} links to clipboard\`);
-    alert(\`Copied \${count} links to clipboard!\`);
-}).catch(err => {
-    console.error('Failed to copy:', err);
-});`
-    },
-
-    highlightKeywords: {
-        name: "Highlight Keywords",
-        description: "Highlight keywords on the page",
-        category: "Content Modification",
-        code: `// Highlight keywords
-const keywords = ['important', 'note', 'warning']; // Change keywords
-const highlightColor = '#ffff00';
-
-function highlightText(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-        let text = node.textContent;
-        if (keywords.some(k => text.toLowerCase().includes(k.toLowerCase()))) {
-            const span = document.createElement('span');
-            // Create a single regex for all keywords to avoid replacing HTML tags or attributes
-            const regex = new RegExp('(' + keywords.map(k => k.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\$&')).join('|') + ')', 'gi');
-            
-            span.innerHTML = text.replace(regex, 
-                \`<mark style="background: \${highlightColor};">$1</mark>\`);
-            node.parentNode.replaceChild(span, node);
-        }
-    } else if (node.nodeType === Node.ELEMENT_NODE && 
-               node.tagName !== 'SCRIPT' && 
-               node.tagName !== 'STYLE') {
-        Array.from(node.childNodes).forEach(highlightText);
+    h1, h2, h3, h4, h5, h6 {
+      font-family: '\${FONT_NAME}', serif !important;
+      line-height: 1.3 !important;
     }
-}
+    pre, code, .code, [class*="code-"] {
+      font-family: 'Courier New', monospace !important;
+    }
+  \`;
 
-highlightText(document.body);
-console.log('Keywords highlighted');`
-    },
+  const id = 'webcustom-font';
+  const existing = document.getElementById(id);
+  if (existing) existing.remove();
 
-    autoScroll: {
-        name: "Auto Scroll Page",
-        description: "Automatically scroll page (useful for infinite scroll)",
-        category: "Automation",
-        code: `// Auto scroll
-let scrollInterval;
-let scrollSpeed = 50; // pixels per interval
-let scrollDelay = 100; // milliseconds
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
 
-function startAutoScroll() {
-    scrollInterval = setInterval(() => {
-        window.scrollBy(0, scrollSpeed);
-        
-        // Stop when reaching the bottom (with 10px buffer)
-        if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10) {
-            stopAutoScroll();
-            console.log('Reached end of page');
-        }
-    }, scrollDelay);
-    console.log('Auto scroll started');
-}
+  console.log('[WebCustom] Font changed to: ' + FONT_NAME);
+})();`
+  },
 
-function stopAutoScroll() {
-    clearInterval(scrollInterval);
-    console.log('Auto scroll stopped');
-}
+  zoomPage: {
+    name: "Custom Page Zoom",
+    description: "Phóng to/thu nhỏ nội dung trang theo ý muốn mà không dùng Ctrl+/- của browser.",
+    category: "🎨 Styling",
+    code: `(function customZoom() {
+  const ZOOM_LEVEL = 1.15; // 1.0 = 100%, 1.15 = 115%, 0.9 = 90%
 
-// Bắt đầu scroll
-startAutoScroll();
+  document.body.style.zoom = ZOOM_LEVEL;
+  // Fallback cho Firefox
+  document.body.style.transform       = 'scale(' + ZOOM_LEVEL + ')';
+  document.body.style.transformOrigin = 'top left';
+  document.body.style.width           = (100 / ZOOM_LEVEL) + '%';
 
-// Dừng khi nhấn ESC
-document.addEventListener('keydown', (e) => {
+  console.log('[WebCustom] Zoom set to ' + (ZOOM_LEVEL * 100) + '%');
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 🔧 DEVELOPER TOOLS
+  // ══════════════════════════════════════════
+
+  highlightElements: {
+    name: "Highlight & Inspect Elements",
+    description: "Di chuột lên element nào sẽ highlight và hiện thông tin tag, class, id. Nhấn ESC để tắt.",
+    category: "🔧 Developer Tools",
+    code: `(function elementInspector() {
+  const tooltip = document.createElement('div');
+  tooltip.style.cssText = \`
+    position: fixed; pointer-events: none; z-index: 999999;
+    background: #0c0e14; border: 1px solid #3dd6f5;
+    color: #dce3f0; font-family: 'Courier New', monospace;
+    font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    max-width: 320px; word-break: break-all; display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  \`;
+  document.body.appendChild(tooltip);
+
+  let lastEl = null;
+
+  document.addEventListener('mouseover', e => {
+    if (e.target === tooltip) return;
+    lastEl = e.target;
+    lastEl.style.outline = '2px solid #3dd6f5';
+
+    const tag   = e.target.tagName.toLowerCase();
+    const id    = e.target.id    ? '#' + e.target.id    : '';
+    const cls   = e.target.className && typeof e.target.className === 'string'
+                  ? '.' + [...e.target.classList].slice(0,3).join('.') : '';
+    const w     = Math.round(e.target.offsetWidth);
+    const h     = Math.round(e.target.offsetHeight);
+
+    tooltip.innerHTML = \`<b style="color:#3dd6f5">\${tag}\${id}\${cls}</b><br>\${w} × \${h}px\`;
+    tooltip.style.display = 'block';
+  }, true);
+
+  document.addEventListener('mouseout', e => {
+    if (lastEl && e.target === lastEl) {
+      lastEl.style.outline = '';
+      lastEl = null;
+    }
+    tooltip.style.display = 'none';
+  }, true);
+
+  document.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY + 14) + 'px';
+  });
+
+  document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        stopAutoScroll();
+      tooltip.remove();
+      if (lastEl) lastEl.style.outline = '';
+      console.log('[WebCustom] Inspector OFF');
     }
-});`
-    },
+  });
 
-    blockRequests: {
-        name: "Block Network Requests",
-        description: "Block unwanted network requests (analytics, ads)",
-        category: "Performance",
-        code: `// Block unwanted requests
-const blockedDomains = [
-    'google-analytics.com',
-    'doubleclick.net',
-    'facebook.com/tr',
-    'googletagmanager.com'
-];
+  console.log('[WebCustom] Inspector ON — hover to inspect, ESC to exit');
+})();`
+  },
 
-// Override fetch
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-    const url = args[0];
-    if (typeof url === 'string' && blockedDomains.some(domain => url.includes(domain))) {
-        console.log('Blocked fetch request:', url);
-        return Promise.reject(new Error('Blocked by script'));
+  showGridOverlay: {
+    name: "CSS Grid Overlay",
+    description: "Hiển thị đường kẻ 8px grid để kiểm tra layout. Click lại vào bookmarklet để toggle.",
+    category: "🔧 Developer Tools",
+    code: `(function gridOverlay() {
+  const id = 'webcustom-grid';
+  const existing = document.getElementById(id);
+  if (existing) { existing.remove(); return; }
+
+  const GRID   = 8;   // px
+  const COLOR  = 'rgba(61, 214, 245, 0.08)';
+  const ACCENT = 'rgba(61, 214, 245, 0.18)'; // mỗi 8 ô (64px)
+
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = \`
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 999998;
+      background-image:
+        linear-gradient(to right,  \${ACCENT} 1px, transparent 1px),
+        linear-gradient(to bottom, \${ACCENT} 1px, transparent 1px),
+        linear-gradient(to right,  \${COLOR}  1px, transparent 1px),
+        linear-gradient(to bottom, \${COLOR}  1px, transparent 1px);
+      background-size:
+        \${GRID * 8}px \${GRID * 8}px,
+        \${GRID * 8}px \${GRID * 8}px,
+        \${GRID}px     \${GRID}px,
+        \${GRID}px     \${GRID}px;
     }
-    return originalFetch.apply(this, args);
-};
+  \`;
+  document.head.appendChild(style);
+  console.log('[WebCustom] Grid overlay ON — run again to toggle OFF');
+})();`
+  },
 
-// Override XMLHttpRequest
-const originalOpen = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-    if (blockedDomains.some(domain => url.includes(domain))) {
-        console.log('Blocked XHR request:', url);
-        return;
+  localStorageViewer: {
+    name: "LocalStorage / Cookie Viewer",
+    description: "Hiển thị toàn bộ dữ liệu localStorage và cookies của trang, dạng bảng dễ đọc.",
+    category: "🔧 Developer Tools",
+    code: `(function storageViewer() {
+  // Thu thập data
+  const ls = Object.entries(localStorage).map(([k, v]) => ({ key: k, value: v, source: 'localStorage' }));
+  const ss = Object.entries(sessionStorage).map(([k, v]) => ({ key: k, value: v, source: 'sessionStorage' }));
+  const ck = document.cookie.split(';').filter(Boolean).map(c => {
+    const [k, ...rest] = c.trim().split('=');
+    return { key: k, value: rest.join('='), source: 'Cookie' };
+  });
+
+  const all = [...ls, ...ss, ...ck];
+
+  const sourceColor = { localStorage: '#3dd6f5', sessionStorage: '#7c6cf8', Cookie: '#f5a623' };
+
+  const rows = all.map(item => {
+    let val = item.value;
+    try { val = JSON.stringify(JSON.parse(val), null, 0); } catch {}
+    if (val && val.length > 80) val = val.substring(0, 80) + '…';
+    return \`<tr>
+      <td style="padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;
+          background:rgba(255,255,255,.06);color:\${sourceColor[item.source] || '#fff'}">\${item.source}</span>
+      </td>
+      <td style="padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06);font-family:'Courier New',monospace;font-size:11.5px;color:#3dd6f5;word-break:break-all">\${item.key}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06);font-family:'Courier New',monospace;font-size:11px;color:#9ba8c4;word-break:break-all">\${val || '—'}</td>
+    </tr>\`;
+  }).join('');
+
+  const panel = document.createElement('div');
+  panel.style.cssText = \`
+    position:fixed;top:20px;right:20px;width:600px;max-height:70vh;
+    background:#111520;border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;z-index:999999;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,.6);
+    display:flex;flex-direction:column;
+    font-family:system-ui,sans-serif;
+  \`;
+  panel.innerHTML = \`
+    <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;background:#0c0e14">
+      <span style="font-size:13px;font-weight:700;color:#dce3f0">🗄 Storage Viewer</span>
+      <span style="display:flex;gap:8px;font-size:11px;color:#5a6480">
+        <span style="color:#3dd6f5">\${ls.length} LS</span>
+        <span style="color:#7c6cf8">\${ss.length} SS</span>
+        <span style="color:#f5a623">\${ck.length} CK</span>
+        <span id="wc-sv-close" style="cursor:pointer;color:#ff5a71;font-weight:700;margin-left:8px">✕</span>
+      </span>
+    </div>
+    <div style="overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#dce3f0">
+        <thead style="background:#0c0e14;position:sticky;top:0">
+          <tr>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5a6480">Source</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5a6480">Key</th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5a6480">Value</th>
+          </tr>
+        </thead>
+        <tbody>\${rows || '<tr><td colspan="3" style="padding:20px;text-align:center;color:#5a6480">No storage data found</td></tr>'}</tbody>
+      </table>
+    </div>
+  \`;
+  document.body.appendChild(panel);
+  document.getElementById('wc-sv-close').onclick = () => panel.remove();
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 📊 PAGE ANALYTICS
+  // ══════════════════════════════════════════
+
+  pageInfo: {
+    name: "Page SEO & Meta Info",
+    description: "Hiển thị đầy đủ thông tin SEO của trang: title, description, og tags, canonical, robots, heading structure.",
+    category: "📊 Page Analytics",
+    code: `(function pageSEOInfo() {
+  const getMeta = (name) =>
+    document.querySelector('meta[name="' + name + '"]')?.content ||
+    document.querySelector('meta[property="' + name + '"]')?.content || '—';
+
+  const headings = {};
+  ['h1','h2','h3','h4'].forEach(tag => {
+    headings[tag] = document.querySelectorAll(tag).length;
+  });
+
+  const imgs = document.querySelectorAll('img');
+  const imgsNoAlt = [...imgs].filter(i => !i.alt).length;
+  const links = document.querySelectorAll('a[href]').length;
+
+  const data = [
+    ['Title',         document.title],
+    ['Description',   getMeta('description')],
+    ['OG Title',      getMeta('og:title')],
+    ['OG Description',getMeta('og:description')],
+    ['OG Image',      getMeta('og:image')],
+    ['Canonical',     document.querySelector('link[rel="canonical"]')?.href || '—'],
+    ['Robots',        getMeta('robots')],
+    ['Viewport',      getMeta('viewport')],
+    ['H1 count',      headings.h1],
+    ['H2 count',      headings.h2],
+    ['H3 count',      headings.h3],
+    ['Images total',  imgs.length],
+    ['Images no-alt', imgsNoAlt + (imgsNoAlt > 0 ? ' ⚠️' : ' ✓')],
+    ['Links',         links],
+  ];
+
+  const rows = data.map(([k, v]) => \`
+    <tr>
+      <td style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.05);font-size:11.5px;font-weight:600;color:#5a6480;white-space:nowrap">\${k}</td>
+      <td style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;color:#dce3f0;word-break:break-all;max-width:340px">\${v}</td>
+    </tr>\`).join('');
+
+  const panel = document.createElement('div');
+  panel.style.cssText = \`
+    position:fixed;top:20px;left:20px;width:500px;max-height:75vh;
+    background:#111520;border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;z-index:999999;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,.6);
+    font-family:system-ui,sans-serif;display:flex;flex-direction:column;
+  \`;
+  panel.innerHTML = \`
+    <div style="padding:12px 16px;background:#0c0e14;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:700;color:#dce3f0">📊 SEO & Meta Info</span>
+      <span id="wc-seo-close" style="cursor:pointer;color:#ff5a71;font-weight:700;font-size:13px">✕</span>
+    </div>
+    <div style="overflow-y:auto"><table style="width:100%;border-collapse:collapse">\${rows}</table></div>
+  \`;
+  document.body.appendChild(panel);
+  document.getElementById('wc-seo-close').onclick = () => panel.remove();
+})();`
+  },
+
+  scrollDepthTracker: {
+    name: "Scroll Depth Tracker",
+    description: "Theo dõi và hiển thị thanh tiến trình đọc bài viết ở đầu trang.",
+    category: "📊 Page Analytics",
+    code: `(function scrollDepthTracker() {
+  const id = 'webcustom-progress';
+  if (document.getElementById(id)) { document.getElementById(id).remove(); return; }
+
+  const bar = document.createElement('div');
+  bar.id = id;
+  bar.style.cssText = \`
+    position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, #3dd6f5, #7c6cf8);
+    z-index: 999999; transition: width .1s ease;
+    box-shadow: 0 0 8px rgba(61,214,245,.5);
+  \`;
+
+  const pct = document.createElement('span');
+  pct.style.cssText = \`
+    position:fixed;top:6px;right:12px;
+    font-family:system-ui;font-size:11px;font-weight:700;
+    color:#3dd6f5;z-index:999999;
+    background:rgba(12,14,20,.8);padding:2px 7px;border-radius:5px;
+  \`;
+
+  document.body.appendChild(bar);
+  document.body.appendChild(pct);
+
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const total    = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = total > 0 ? Math.round((scrolled / total) * 100) : 0;
+    bar.style.width = progress + '%';
+    pct.textContent = progress + '%';
+  });
+
+  console.log('[WebCustom] Scroll tracker ON — run again to toggle OFF');
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 🔔 MONITORING / ALERTS
+  // ══════════════════════════════════════════
+
+  priceMonitor: {
+    name: "Price Change Monitor",
+    description: "Theo dõi thay đổi giá sản phẩm trên trang, gửi thông báo Telegram khi giá thay đổi.",
+    category: "🔔 Monitoring",
+    code: `(function priceMonitor() {
+  // ── Config ──
+  const BOT_TOKEN  = 'YOUR_BOT_TOKEN';
+  const CHAT_ID    = 'YOUR_CHAT_ID';
+  const CHECK_INTERVAL_MS = 30 * 1000; // 30 giây
+  const STORAGE_KEY       = 'wc_price_' + location.hostname;
+
+  // ── Tìm giá tự động ──
+  const priceSelectors = [
+    '[class*="price"]', '[class*="Price"]',
+    '[class*="cost"]',  '[itemprop="price"]',
+    '[data-price]',     '.product-price',
+    '#price',           '.sale-price',
+    '.current-price',
+  ];
+
+  function extractPrice() {
+    for (const sel of priceSelectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const text  = el.innerText || el.getAttribute('content') || '';
+        const match = text.match(/[\d.,]+/);
+        if (match) return { text: text.trim(), num: parseFloat(match[0].replace(',', '.')) };
+      }
     }
-    return originalOpen.apply(this, [method, url, ...rest]);
-};
+    return null;
+  }
 
-console.log('Request blocking enabled');`
-    },
-
-    customAlert: {
-        name: "Custom Alert Message",
-        description: "Display custom alert message when entering the page",
-        category: "Utility",
-        code: `// Custom alert
-const message = "Welcome to this website!";
-const style = \`
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #4CAF50;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    z-index: 999999;
-    font-family: Arial, sans-serif;
-    animation: slideIn 0.3s ease-out;
-\`;
-
-const alertBox = document.createElement('div');
-alertBox.textContent = message;
-alertBox.style.cssText = style;
-document.body.appendChild(alertBox);
-
-// Auto remove after 5 seconds
-setTimeout(() => {
-    alertBox.style.animation = 'slideOut 0.3s ease-out';
-    setTimeout(() => alertBox.remove(), 300);
-}, 5000);
-
-// Add animations
-const styleSheet = document.createElement('style');
-styleSheet.textContent = \`
-    @keyframes slideIn {
-        from { transform: translateX(400px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(400px); opacity: 0; }
-    }
-\`;
-document.head.appendChild(styleSheet);`
-    },
-
-    sendTelegram: {
-        name: "Send Telegram Notification",
-        description: "Send a message to Telegram using Bot API",
-        category: "Utility",
-        code: `// Send Telegram Notification
-// Replace with your actual credentials
-const BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE';
-const CHAT_ID = 'YOUR_CHAT_ID_HERE';
-
-/**
- * Sends a message to Telegram (via Extension Bridge)
- * @param {string} text - The message to send
- */
-function sendToTelegram(text) {
-    if (BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
-        console.warn('Please set your Telegram Bot Token in the script');
-        return;
-    }
-
-    // Trigger bridge event (Main World -> Content Script -> Background)
+  function sendTelegram(msg) {
     const event = new CustomEvent('web-customizer-send-telegram', {
-        detail: {
-            botToken: BOT_TOKEN,
-            chatId: CHAT_ID,
-            message: text
-        }
+      detail: { botToken: BOT_TOKEN, chatId: CHAT_ID, message: msg }
     });
-    window.dispatchEvent(event);
-    console.log('[Telegram] Notification request sent');
-}
+    document.dispatchEvent(event);
+  }
 
-// Example: Send notification when page is loaded
-sendToTelegram('🔔 <b>Page loaded</b>\\n\\n' + 
-               '📌 Title: <code>' + document.title + '</code>\\n' + 
-               '🔗 URL: ' + window.location.href);`
+  function check() {
+    const current = extractPrice();
+    if (!current) return;
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      console.log('[PriceMonitor] Initial price saved:', current.text);
+      return;
     }
+
+    if (current.num !== stored.num) {
+      const diff    = current.num - stored.num;
+      const pct     = ((diff / stored.num) * 100).toFixed(1);
+      const arrow   = diff < 0 ? '📉' : '📈';
+      const msg = \`\${arrow} <b>Price changed!</b>\\n\\n\` +
+        \`🔗 \${document.title}\\n\` +
+        \`Before: <s>\${stored.text}</s>\\n\` +
+        \`After:  <b>\${current.text}</b>  (\${diff > 0 ? '+' : ''}\${pct}%)\\n\` +
+        \`🕐 \${new Date().toLocaleString()}\\n\` +
+        \`🔗 <a href="\${location.href}">View page</a>\`;
+
+      sendTelegram(msg);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      console.log('[PriceMonitor] Price changed! New:', current.text);
+    }
+  }
+
+  check();
+  setInterval(check, CHECK_INTERVAL_MS);
+  console.log('[PriceMonitor] Watching price every', CHECK_INTERVAL_MS / 1000, 'seconds');
+})();`
+  },
+
+  textChangeMonitor: {
+    name: "Text Content Change Monitor",
+    description: "Theo dõi sự thay đổi của một element cụ thể trên trang, gửi Telegram khi nội dung thay đổi.",
+    category: "🔔 Monitoring",
+    code: `(function textChangeMonitor() {
+  // ── Config ──
+  const BOT_TOKEN   = 'YOUR_BOT_TOKEN';
+  const CHAT_ID     = 'YOUR_CHAT_ID';
+  const SELECTOR    = '.target-element'; // CSS selector của element cần theo dõi
+  const LABEL       = 'My Monitor';      // Tên để nhận dạng trong Telegram
+
+  const el = document.querySelector(SELECTOR);
+  if (!el) {
+    console.warn('[TextMonitor] Element not found:', SELECTOR);
+    return;
+  }
+
+  let lastContent = el.innerText.trim();
+  console.log('[TextMonitor] Watching:', SELECTOR, '| Initial:', lastContent.substring(0, 80));
+
+  function sendTelegram(msg) {
+    const event = new CustomEvent('web-customizer-send-telegram', {
+      detail: { botToken: BOT_TOKEN, chatId: CHAT_ID, message: msg }
+    });
+    document.dispatchEvent(event);
+  }
+
+  const observer = new MutationObserver(() => {
+    const current = el.innerText.trim();
+    if (current !== lastContent) {
+      const msg = \`🔔 <b>\${LABEL} — Content Changed!</b>\\n\\n\` +
+        \`📌 Element: <code>\${SELECTOR}</code>\\n\` +
+        \`🕐 Time: \${new Date().toLocaleString()}\\n\` +
+        \`🔗 <a href="\${location.href}">\${document.title}</a>\\n\\n\` +
+        \`<b>Before:</b> <i>\${lastContent.substring(0, 200)}</i>\\n\` +
+        \`<b>After:</b>  <i>\${current.substring(0, 200)}</i>\`;
+
+      sendTelegram(msg);
+      console.log('[TextMonitor] Changed!', current.substring(0, 100));
+      lastContent = current;
+    }
+  });
+
+  observer.observe(el, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+
+  console.log('[TextMonitor] Active — watching for changes in:', SELECTOR);
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 🛒 E-COMMERCE
+  // ══════════════════════════════════════════
+
+  couponFinder: {
+    name: "Coupon Code Finder",
+    description: "Tìm và hiển thị tất cả mã giảm giá (coupon code) được ẩn trong source code của trang.",
+    category: "🛒 E-Commerce",
+    code: `(function couponFinder() {
+  const couponPatterns = [
+    /coupon[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /promo[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /discount[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /voucher[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /gift[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /code[\"':\s]+([A-Z]{2,4}[0-9]{2,8})/g,
+  ];
+
+  const source = document.documentElement.innerHTML;
+  const found  = new Set();
+
+  couponPatterns.forEach(pattern => {
+    let m;
+    while ((m = pattern.exec(source)) !== null) {
+      if (m[1] && m[1].length >= 4 && m[1].length <= 20) {
+        found.add(m[1].toUpperCase());
+      }
+    }
+  });
+
+  // Tìm thêm trong script tags
+  document.querySelectorAll('script').forEach(s => {
+    const text = s.textContent;
+    couponPatterns.forEach(pattern => {
+      pattern.lastIndex = 0;
+      let m;
+      while ((m = pattern.exec(text)) !== null) {
+        if (m[1]) found.add(m[1].toUpperCase());
+      }
+    });
+  });
+
+  const codes = [...found];
+  const panel = document.createElement('div');
+  panel.style.cssText = \`
+    position:fixed;top:20px;right:20px;width:300px;
+    background:#111520;border:1px solid rgba(61,214,245,.25);
+    border-radius:12px;z-index:999999;overflow:hidden;
+    box-shadow:0 16px 48px rgba(0,0,0,.6);
+    font-family:system-ui,sans-serif;
+  \`;
+
+  const items = codes.length > 0
+    ? codes.map(c => \`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <code style="font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:#3dd6f5">\${c}</code>
+        <button onclick="navigator.clipboard.writeText('\${c}');this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',1500)"
+          style="font-size:10px;padding:3px 9px;background:rgba(61,214,245,.1);border:1px solid rgba(61,214,245,.25);
+          border-radius:5px;color:#3dd6f5;cursor:pointer;font-family:inherit">Copy</button>
+      </div>\`).join('')
+    : '<div style="padding:16px;text-align:center;color:#5a6480;font-size:12px">No coupon codes found in page source</div>';
+
+  panel.innerHTML = \`
+    <div style="padding:12px 16px;background:#0c0e14;border-bottom:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:700;color:#dce3f0">🎟 Coupon Finder · \${codes.length} found</span>
+      <span id="wc-cf-close" style="cursor:pointer;color:#ff5a71;font-weight:700">✕</span>
+    </div>
+    \${items}
+  \`;
+  document.body.appendChild(panel);
+  document.getElementById('wc-cf-close').onclick = () => panel.remove();
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 🖱 AUTOMATION
+  // ══════════════════════════════════════════
+
+  infiniteScrollLoader: {
+    name: "Auto Infinite Scroll",
+    description: "Tự động cuộn trang để load thêm nội dung, hữu ích cho trang dùng infinite scroll.",
+    category: "🖱 Automation",
+    code: `(function autoScroll() {
+  const SCROLL_SPEED  = 3;     // px mỗi tick
+  const TICK_INTERVAL = 30;    // ms
+  const PAUSE_AT_BOTTOM = 2000; // ms dừng lại khi đến cuối để chờ load thêm
+  const MAX_SCROLLS   = 50;    // giới hạn số lần scroll đến cuối (0 = không giới hạn)
+
+  const id = 'webcustom-autoscroll';
+  if (window[id]) {
+    clearInterval(window[id]);
+    window[id] = null;
+    console.log('[AutoScroll] Stopped');
+    return;
+  }
+
+  let bottomCount = 0;
+  let waiting     = false;
+
+  window[id] = setInterval(() => {
+    if (waiting) return;
+
+    window.scrollBy(0, SCROLL_SPEED);
+
+    const isBottom = (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 50;
+    if (isBottom) {
+      bottomCount++;
+      if (MAX_SCROLLS > 0 && bottomCount >= MAX_SCROLLS) {
+        clearInterval(window[id]);
+        window[id] = null;
+        console.log('[AutoScroll] Reached max scroll limit:', MAX_SCROLLS);
+        return;
+      }
+      waiting = true;
+      setTimeout(() => { waiting = false; }, PAUSE_AT_BOTTOM);
+      console.log('[AutoScroll] Bottom reached, waiting for more content... (' + bottomCount + ')');
+    }
+  }, TICK_INTERVAL);
+
+  console.log('[AutoScroll] Started — run again to STOP');
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      clearInterval(window[id]);
+      window[id] = null;
+      console.log('[AutoScroll] Stopped by ESC');
+    }
+  }, { once: true });
+})();`
+  },
+
+  copyAllLinks: {
+    name: "Copy All Links on Page",
+    description: "Thu thập và copy tất cả URL hợp lệ trên trang vào clipboard, mỗi link một dòng.",
+    category: "🖱 Automation",
+    code: `(function copyAllLinks() {
+  const links = [...new Set(
+    [...document.querySelectorAll('a[href]')]
+      .map(a => a.href)
+      .filter(href =>
+        href.startsWith('http') &&
+        !href.includes('javascript:') &&
+        !href.includes('#')
+      )
+  )];
+
+  if (links.length === 0) {
+    console.log('[WebCustom] No links found');
+    return;
+  }
+
+  navigator.clipboard.writeText(links.join('\\n')).then(() => {
+    const toast = document.createElement('div');
+    toast.style.cssText = \`
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:#141720;border:1px solid rgba(45,212,160,.3);
+      color:#2dd4a0;font-family:system-ui;font-size:13px;font-weight:600;
+      padding:10px 20px;border-radius:10px;z-index:999999;
+      box-shadow:0 4px 20px rgba(0,0,0,.4);
+    \`;
+    toast.textContent = '✓ Copied ' + links.length + ' links to clipboard';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  });
+
+  console.log('[WebCustom] Copied', links.length, 'links');
+})();`
+  },
+
+  downloadAllImages: {
+    name: "Download All Images",
+    description: "Tải về tất cả ảnh trên trang (chỉ ảnh có kích thước đáng kể, bỏ qua icon nhỏ).",
+    category: "🖱 Automation",
+    code: `(function downloadImages() {
+  const MIN_SIZE   = 100; // px — bỏ qua ảnh nhỏ hơn
+  const MAX_BATCH  = 20;  // tối đa bao nhiêu ảnh cùng lúc
+
+  const imgs = [...document.querySelectorAll('img')]
+    .filter(img => {
+      const src = img.src || img.dataset.src || img.dataset.lazySrc;
+      return src &&
+        !src.startsWith('data:') &&
+        img.naturalWidth  >= MIN_SIZE &&
+        img.naturalHeight >= MIN_SIZE;
+    });
+
+  if (imgs.length === 0) {
+    console.log('[WebCustom] No qualifying images found');
+    return;
+  }
+
+  const toDownload = imgs.slice(0, MAX_BATCH);
+  if (!confirm('Download ' + toDownload.length + ' images?\n(Min size: ' + MIN_SIZE + 'px, max batch: ' + MAX_BATCH + ')')) return;
+
+  toDownload.forEach((img, i) => {
+    setTimeout(() => {
+      const src = img.src || img.dataset.src;
+      const ext = src.split('.').pop().split('?')[0] || 'jpg';
+      const a   = document.createElement('a');
+      a.href     = src;
+      a.download = 'image-' + (i + 1) + '.' + ext;
+      a.target   = '_blank';
+      a.click();
+    }, i * 300); // delay để tránh browser block
+  });
+
+  console.log('[WebCustom] Downloading', toDownload.length, 'images...');
+})();`
+  },
+
+  // ══════════════════════════════════════════
+  // 💬 SOCIAL MEDIA
+  // ══════════════════════════════════════════
+
+  twitterClean: {
+    name: "Clean Twitter / X UI",
+    description: "Ẩn Trends, Who to Follow, gợi ý quảng cáo và các widget phiền nhiễu trên Twitter/X.",
+    category: "💬 Social Media",
+    code: `(function cleanTwitter() {
+  const css = \`
+    /* Ẩn sidebar phải: Trends, Who to follow */
+    [data-testid="sidebarColumn"] { display: none !important; }
+
+    /* Ẩn Promoted tweets */
+    [data-testid="placementTracking"] { display: none !important; }
+
+    /* Ẩn "Who to follow" trong timeline */
+    [data-testid="UserCell"] ~ div[class] { }
+    aside[aria-label*="follow" i]        { display: none !important; }
+
+    /* Ẩn Topics to follow */
+    [data-testid="TopicsModule"]         { display: none !important; }
+
+    /* Ẩn Download app banner */
+    [id="layers"] [href*="download"]     { display: none !important; }
+
+    /* Rộng nội dung hơn khi không có sidebar */
+    [data-testid="primaryColumn"] { max-width: 700px !important; }
+  \`;
+
+  const style = document.createElement('style');
+  style.id = 'webcustom-twitter-clean';
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  console.log('[WebCustom] Twitter/X cleaned');
+})();`
+  },
+
+  facebookClean: {
+    name: "Clean Facebook Feed",
+    description: "Ẩn sidebar, Stories, Reels, gợi ý người dùng, quảng cáo khỏi news feed Facebook.",
+    category: "💬 Social Media",
+    code: `(function cleanFacebook() {
+  const css = \`
+    /* Ẩn cột phải (ads, birthday, events) */
+    [data-pagelet="RightRail"]  { display: none !important; }
+
+    /* Ẩn Stories bar */
+    [data-pagelet="Stories"]    { display: none !important; }
+    [aria-label="Stories"]      { display: none !important; }
+
+    /* Ẩn Reels */
+    [data-pagelet*="Reels"]     { display: none !important; }
+
+    /* Ẩn Suggested for you / Sponsored */
+    [data-pagelet="FeedUnit_0"] [aria-label*="Suggested"],
+    [aria-label="Sponsored"]    { display: none !important; }
+
+    /* Ẩn sidebar trái (bookmarks, groups list) */
+    [data-pagelet="LeftRail"]   { display: none !important; }
+
+    /* Mở rộng feed */
+    [data-pagelet="FeedUnit_0"] { max-width: 680px !important; margin: 0 auto !important; }
+  \`;
+
+  const style = document.createElement('style');
+  style.id = 'webcustom-fb-clean';
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  // Liên tục xóa dynamic sponsored posts
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('[aria-label="Sponsored"]')
+      .forEach(el => el.closest('[data-pagelet]')?.remove());
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  console.log('[WebCustom] Facebook cleaned');
+})();`
+  },
+
 };
 
-// Export for use in options.js
+// Export cho Node.js / module environment
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SCRIPT_TEMPLATES;
+  module.exports = SCRIPT_TEMPLATES;
 }
