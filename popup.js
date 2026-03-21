@@ -116,8 +116,8 @@ class PopupManager {
     }
 
     const matching = Object.entries(this.scripts)
-      .filter(([pattern]) => this.matchUrl(url, pattern))
-      .map(([pattern, s]) => ({ pattern, ...s }));
+      .filter(([id, script]) => this.matchUrl(url, script.pattern))
+      .map(([id, script]) => ({ id, ...script }));
 
     this.updateCount(matching.length);
 
@@ -168,7 +168,7 @@ class PopupManager {
 
     const toggle = div.querySelector(".toggle");
     toggle.addEventListener("change", () =>
-      this.toggleScript(script.pattern, toggle.checked, div),
+      this.toggleScript(script.id, toggle.checked, div),
     );
 
     div
@@ -181,7 +181,7 @@ class PopupManager {
         url:
           chrome.runtime.getURL("options.html") +
           "?edit=" +
-          encodeURIComponent(script.pattern),
+          encodeURIComponent(script.id),
       });
     });
     div.querySelector(".copy").addEventListener("click", () => {
@@ -193,10 +193,10 @@ class PopupManager {
     return div;
   }
 
-  toggleScript(pattern, enabled, cardEl) {
+  toggleScript(scriptId, enabled, cardEl) {
     cardEl.classList.toggle("disabled", !enabled);
     cardEl.querySelector(".script-status").classList.toggle("off", !enabled);
-    this.send({ action: "toggleScript", scriptId: pattern, enabled }, () => {
+    this.send({ action: "toggleScript", scriptId: scriptId, enabled }, () => {
       this.toast(
         enabled ? "Script enabled ✓" : "Script disabled",
         enabled ? "success" : "",
@@ -213,7 +213,7 @@ class PopupManager {
         action: "executeScriptInMainWorld",
         tabId: this.currentTab.id,
         code: script.code,
-        scriptId: script.pattern,
+        scriptId: script.id,
       },
       (res) => {
         btn.disabled = false;

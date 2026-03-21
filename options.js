@@ -76,8 +76,9 @@ class OptionsManager {
   /* ── LOAD & RENDER ── */
   async loadScripts() {
     return new Promise(resolve => {
-      this.send({ action: 'getScripts' }, res => {
-        this.scripts = res.scripts || {};
+      // Đọc trực tiếp từ storage, không qua background message để tránh race condition
+      chrome.storage.local.get('userScripts', (result) => {
+        this.scripts = result.userScripts || {};
         this.filtered = { ...this.scripts };
         this.renderGrid();
         this.updateStats();
@@ -144,7 +145,7 @@ class OptionsManager {
         <div class="sc-name" title="${this.esc(script.name)}">${this.esc(script.name)}</div>
         <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="Toggle">
       </div>
-      <div class="sc-pattern" title="${this.esc(id)}">${this.esc(id)}</div>
+      <div class="sc-pattern" title="${this.esc(script.pattern || id)}">${this.esc(script.pattern || id)}</div>
       <div class="sc-desc">${this.esc(script.description || 'No description')}</div>
       <div class="sc-meta">
         <span class="sc-tag">📅 ${created}</span>
@@ -171,28 +172,34 @@ class OptionsManager {
 
   /* ── TOGGLE ── */
   toggleScript(id, enabled, cardEl) {
-    this.scripts[id].enabled = enabled;
     cardEl.classList.toggle('disabled-card', !enabled);
     cardEl.querySelector('.sc-dot').classList.toggle('off', !enabled);
-    this.send({ action: 'toggleScript', scriptId: id, enabled }, () => {
-      this.updateStats();
-      this.toast(enabled ? `"${this.scripts[id].name}" enabled ✓` : 'Script disabled', enabled ? 'success' : '');
+
+    chrome.storage.local.get('userScripts', (result) => {
+      const all = result.userScripts || {};
+      if (all[id]) {
+        all[id].enabled = enabled;
+        chrome.storage.local.set({ userScripts: all }, () => {
+          this.scripts[id] = all[id];
+          this.updateStats();
+          this.toast(enabled ? `"${all[id].name}" enabled ✓` : 'Script disabled', enabled ? 'success' : '');
+        });
+      }
     });
   }
 
   /* ── DUPLICATE ── */
   duplicateScript(id) {
     const src = this.scripts[id];
-    const newId = id + '_copy_' + Date.now();
-    const newData = { ...src, name: src.name + ' (copy)', createdAt: Date.now(), updatedAt: Date.now() };
-    this.send({ action: 'saveScript', scriptId: newId, scriptData: newData }, res => {
-      if (res.success) {
-        this.scripts[newId] = newData;
-        this.filtered[newId] = newData;
-        this.renderGrid();
-        this.updateStats();
+    const newId = 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+    chrome.storage.local.get('userScripts', (result) => {
+      const all = result.userScripts || {};
+      all[newId] = { ...src, name: src.name + ' (copy)', createdAt: Date.now(), updatedAt: Date.now() };
+      chrome.storage.local.set({ userScripts: all }, () => {
+        this.loadScripts();
         this.toast('Script duplicated ✓', 'success');
-      }
+      });
     });
   }
 
@@ -205,7 +212,7 @@ class OptionsManager {
         <div class="modal-title">👁 ${this.esc(s.name)}</div>
         <button class="modal-close close-btn">✕</button>
       </div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace">${this.esc(id)}</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace">${this.esc(s.pattern || id)}</div>
       <pre class="code-view">${this.esc(s.code || '')}</pre>
       <div class="modal-actions">
         <button class="modal-btn cancel copy-code-btn">⎘ Copy Code</button>
@@ -371,62 +378,175 @@ class OptionsManager {
     const scriptData = { name, description: desc, code, pattern };
     const oldId = this.editId;
 
-    this.send({ action: 'saveScript', scriptId: pattern, scriptData }, async res => {
-      if (!res.success) { this.toast('Save failed: ' + (res.error || '?'), 'error'); return; }
+    const saveBtn = overlay.querySelector('.save-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
 
-      this.scripts[pattern] = { ...scriptData, enabled: this.scripts[pattern]?.enabled ?? true };
+    // Directly write into storage, bypassing background to avoid race conditions
+    chrome.storage.local.get('userScripts', async (result) => {
+      const all = result.userScripts || {};
 
-      // Handle rename: delete old key
-      if (oldId && oldId !== pattern) {
-        await new Promise(resolve => {
-          this.send({ action: 'deleteScript', scriptId: oldId }, () => {
-            delete this.scripts[oldId];
-            resolve();
-          });
-        });
+      // Create a new unique ID for a new script
+      let scriptId;
+      if (oldId) {
+        // Edit mode: keep the old ID
+        scriptId = oldId;
+        
+        // If the pattern is changed (rename), remove the old key
+        if (oldId !== pattern) {
+          delete all[oldId];
+        }
+      } else {
+        // Add mode: create a new unique ID
+        scriptId = 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       }
 
-      this.filtered = { ...this.scripts };
-      this.renderGrid();
-      this.updateStats();
-      overlay.remove();
-      this.toast(`"${name}" saved ✓`, 'success');
+      all[scriptId] = {
+        ...scriptData,
+        enabled: all[scriptId]?.enabled ?? true,
+        createdAt: all[scriptId]?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      chrome.storage.local.set({ userScripts: all }, async () => {
+        if (chrome.runtime.lastError) {
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldId ? '💾 Update' : '＋ Add Script'; }
+          this.toast('Save failed: ' + chrome.runtime.lastError.message, 'error');
+          return;
+        }
+        await this.loadScripts();
+        overlay.remove();
+        this.toast(`"${name}" ${oldId ? 'updated' : 'added'} ✓`, 'success');
+      });
     });
   }
 
   deleteScript(id) {
     const name = this.scripts[id]?.name || id;
     if (!confirm(`Delete "${name}"?\n\nThis cannot be undone.`)) return;
-    this.send({ action: 'deleteScript', scriptId: id }, res => {
-      if (res.success) {
-        delete this.scripts[id];
-        delete this.filtered[id];
-        this.renderGrid();
-        this.updateStats();
+
+    chrome.storage.local.get('userScripts', (result) => {
+      const all = result.userScripts || {};
+      delete all[id];
+      chrome.storage.local.set({ userScripts: all }, () => {
+        this.loadScripts();
         this.toast(`"${name}" deleted`, 'warn');
-      }
+      });
     });
   }
 
   /* ── TEMPLATES ── */
   renderTemplates() {
-    const grid = document.getElementById('templatesGrid');
+    this._tplCategory = 'all';
+    this._tplQuery    = '';
+
+    // Build category list from templates
+    const categories = ['all', ...new Set(
+      Object.values(SCRIPT_TEMPLATES).map(t => t.category)
+    )];
+
+    // Render chips
+    const chipsEl = document.getElementById('tplCategoryChips');
+    chipsEl.innerHTML = '';
+    categories.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.className = 'tpl-chip' + (cat === 'all' ? ' tpl-chip-all active' : '');
+      chip.textContent = cat === 'all' ? '✦ Tất cả' : cat;
+      chip.addEventListener('click', () => {
+        this._tplCategory = cat;
+        chipsEl.querySelectorAll('.tpl-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        this._renderTplGrid();
+      });
+      chipsEl.appendChild(chip);
+    });
+
+    // Search input
+    const searchEl = document.getElementById('tplSearch');
+    const clearBtn = document.getElementById('tplClearSearch');
+
+    searchEl.addEventListener('input', () => {
+      this._tplQuery = searchEl.value.trim().toLowerCase();
+      clearBtn.style.display = this._tplQuery ? 'flex' : 'none';
+      this._renderTplGrid();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      searchEl.value    = '';
+      this._tplQuery    = '';
+      clearBtn.style.display = 'none';
+      searchEl.focus();
+      this._renderTplGrid();
+    });
+
+    // Initial render
+    this._renderTplGrid();
+  }
+
+  _renderTplGrid() {
+    const grid      = document.getElementById('templatesGrid');
+    const countEl   = document.getElementById('tplResultCount');
+    const q         = this._tplQuery || '';
+    const cat       = this._tplCategory || 'all';
+
+    const allEntries = Object.entries(SCRIPT_TEMPLATES);
+
+    const filtered = allEntries.filter(([, tpl]) => {
+      const matchCat = cat === 'all' || tpl.category === cat;
+      const matchQ   = !q ||
+        tpl.name.toLowerCase().includes(q) ||
+        tpl.description.toLowerCase().includes(q) ||
+        tpl.category.toLowerCase().includes(q);
+      return matchCat && matchQ;
+    });
+
+    // Result count
+    if (q || cat !== 'all') {
+      countEl.textContent = filtered.length === 0
+        ? 'Không tìm thấy template nào'
+        : `${filtered.length} / ${allEntries.length} templates`;
+    } else {
+      countEl.textContent = `${allEntries.length} templates`;
+    }
+
+    // Render cards
     grid.innerHTML = '';
-    Object.entries(SCRIPT_TEMPLATES).forEach(([key, tpl], i) => {
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">Không tìm thấy</div>
+            <div class="empty-desc">Thử từ khoá khác hoặc chọn danh mục khác.</div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    filtered.forEach(([key, tpl], i) => {
       const card = document.createElement('div');
       card.className = 'script-card';
-      card.style.animationDelay = `${i * 30}ms`;
+      card.style.animationDelay = `${i * 25}ms`;
+
+      // Highlight matched text
+      const highlight = (text) => {
+        if (!q) return this.esc(text);
+        const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return this.esc(text).replace(regex, '<mark style="background:rgba(61,214,245,.2);color:var(--accent);border-radius:2px;padding:0 1px">$1</mark>');
+      };
+
       card.innerHTML = `
         <div class="sc-top" style="margin-bottom:8px">
           <span class="tpl-cat">${this.esc(tpl.category)}</span>
         </div>
-        <div class="sc-name" style="margin-bottom:6px;font-size:14px">${this.esc(tpl.name)}</div>
-        <div class="sc-desc" style="margin-bottom:12px;-webkit-line-clamp:3">${this.esc(tpl.description)}</div>
+        <div class="sc-name" style="margin-bottom:6px;font-size:14px">${highlight(tpl.name)}</div>
+        <div class="sc-desc" style="margin-bottom:12px;-webkit-line-clamp:3">${highlight(tpl.description)}</div>
         <div class="sc-actions">
           <button class="sc-btn use-tpl" style="flex:2">＋ Use Template</button>
           <button class="sc-btn preview-tpl">👁</button>
         </div>
       `;
+
       card.querySelector('.use-tpl').addEventListener('click', () => {
         this.goTo('scripts');
         this.openModalWithTemplate(tpl);
@@ -453,6 +573,7 @@ class OptionsManager {
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         document.body.appendChild(ov);
       });
+
       grid.appendChild(card);
     });
   }
@@ -696,3 +817,13 @@ Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài 
 
 const optionsManager = new OptionsManager();
 window._om = optionsManager;
+
+// Auto-refresh khi storage thay đổi từ bất kỳ nguồn nào (popup, content script...)
+chrome.storage.local.onChanged.addListener((changes) => {
+  if (changes.userScripts) {
+    optionsManager.scripts  = changes.userScripts.newValue || {};
+    optionsManager.filtered = { ...optionsManager.scripts };
+    optionsManager.renderGrid();
+    optionsManager.updateStats();
+  }
+});

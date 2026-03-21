@@ -141,16 +141,21 @@ class BackgroundScriptManager {
         const { userScripts } = await chrome.storage.local.get('userScripts');
         const scripts = userScripts || {};
 
-        scripts[scriptId] = {
+        // If scriptId is not provided or is empty, generate a new ID
+        const finalScriptId = scriptId && scriptId.trim() !== '' 
+            ? scriptId 
+            : 'script_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        scripts[finalScriptId] = {
             ...scriptData,
             enabled: true,
-            createdAt: scripts[scriptId]?.createdAt || Date.now(),
+            createdAt: scripts[finalScriptId]?.createdAt || Date.now(),
             updatedAt: Date.now()
         };
 
         await chrome.storage.local.set({ userScripts: scripts });
         this.addLog(`Script saved: ${scriptData.name}`, 'save');
-        sendResponse({ success: true });
+        sendResponse({ success: true, scriptId: finalScriptId });
     }
 
     /**

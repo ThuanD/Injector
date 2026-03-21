@@ -169,6 +169,11 @@
     .toggle2:checked{background:var(--success)}
     .toggle2:checked::after{left:18px}
 
+    .tpl-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text2);transition:all .18s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+    .tpl-chip:hover{border-color:var(--border2);color:var(--text)}
+    .tpl-chip.active{background:rgba(61,214,245,.1);border-color:rgba(61,214,245,.35);color:var(--accent);font-weight:600}
+    .tpl-chip-all.active{background:linear-gradient(135deg,rgba(61,214,245,.12),rgba(124,108,248,.12));border-color:rgba(124,108,248,.35);color:var(--accent2)}
+
     /* GUIDE PAGE */
     .guide-hero{background:linear-gradient(135deg,rgba(61,214,245,.08),rgba(124,108,248,.08));border:1px solid rgba(61,214,245,.15);border-radius:var(--radius);padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden}
     .guide-hero::before{content:'⚡';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:64px;opacity:.08}
@@ -356,6 +361,22 @@
           <div class="page-subtitle">Ready-to-use scripts — click to add and customize</div>
         </div>
       </div>
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="tplSearch" class="search-input" placeholder="Tìm theo tên, mô tả, danh mục…">
+        </div>
+        <button class="filter-btn" id="tplClearSearch" style="display:none">✕ Clear</button>
+      </div>
+
+      <!-- CATEGORY CHIPS -->
+      <div id="tplCategoryChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
+
+      <!-- RESULT COUNT -->
+      <div id="tplResultCount" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+
       <div class="scripts-grid" id="templatesGrid"></div>
     </div>
 
