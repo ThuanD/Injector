@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebCustom — Tự động chạy script trên bất kỳ trang web nào</title>
+    <meta
+      name="description"
+      content="Chrome extension miễn phí giúp bạn tự động chạy JavaScript trên bất kỳ trang web nào. Ẩn quảng cáo, tự điền form, theo dõi giá, nhận thông báo Telegram — không cần biết lập trình."
+    />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://webcustom.thuandv.top/" />
+
+    <!-- Favicon — lấy từ icon extension -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="48x48"
+      href="https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon48.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="128x128"
+      href="https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon128.png"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WebCustom" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:url" content="https://webcustom.thuandv.top/" />
+    <meta
+      property="og:title"
+      content="WebCustom — Tự động chạy script trên bất kỳ trang web nào"
+    />
+    <meta
+      property="og:description"
+      content="Chrome extension miễn phí. Ẩn quảng cáo, tự điền form, theo dõi giá, nhận Telegram — không cần biết lập trình."
+    />
+    <meta
+      property="og:image"
+      content="https://webcustom.thuandv.top/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="WebCustom Chrome Extension" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="WebCustom — Tự động chạy script trên bất kỳ trang web nào"
+    />
+    <meta
+      name="twitter:description"
+      content="Chrome extension miễn phí. Ẩn quảng cáo, tự điền form, theo dõi giá, nhận Telegram — không cần biết lập trình."
+    />
+    <meta
+      name="twitter:image"
+      content="https://webcustom.thuandv.top/og-image.png"
+    />
+
+    <!-- Misc -->
+    <meta name="theme-color" content="#080a10" />
+    <meta name="author" content="ThuanD" />
+    <meta
+      name="keywords"
+      content="chrome extension, javascript injector, auto script, ẩn quảng cáo, web customizer, userscript"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- NAV -->
+    <nav>
+      <a class="nav-brand" href="#">
+        <div class="nav-icon">⚡</div>
+        <div class="nav-name">Web<span>Custom</span></div>
+        <div class="nav-ver">v2.0</div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Tính năng</a></li>
+        <li><a href="#templates">Templates</a></li>
+        <li><a href="#install">Cài đặt</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li>
+          <a
+            href="https://www.buymeacoffee.com/thuandv"
+            target="_blank"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 7px 14px;
+              border: 1px solid rgba(245, 166, 35, 0.3);
+              border-radius: 8px;
+              color: var(--warn);
+              font-size: 13px;
+              font-weight: 600;
+              transition: all 0.2s;
+              text-decoration: none;
+              background: rgba(245, 166, 35, 0.06);
+            "
+            onmouseover="
+              this.style.background = 'rgba(245,166,35,.12)';
+              this.style.borderColor = 'rgba(245,166,35,.5)';
+            "
+            onmouseout="
+              this.style.background = 'rgba(245,166,35,.06)';
+              this.style.borderColor = 'rgba(245,166,35,.3)';
+            "
+          >
+            🍭 Buy me a Chupa Chups
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://github.com/ThuanD/WebCustom"
+            target="_blank"
+            class="nav-cta"
+            >↓ Tải về miễn phí</a
+          >
+        </li>
+      </ul>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+
+      <div class="hero-badge">
+        <div class="dot"></div>
+        Miễn phí · Không cần tài khoản · Mã nguồn mở
+      </div>
+
+      <h1>
+        Làm chủ<br />
+        <span class="line2">mọi trang web.</span>
+      </h1>
+
+      <p class="hero-sub">
+        Chrome extension tự động chạy JavaScript trên bất kỳ trang nào bạn muốn.
+        Ẩn quảng cáo, tự điền form, theo dõi giá, nhận Telegram —
+        <strong>không cần biết lập trình.</strong>
+      </p>
+
+      <div class="hero-btns">
+        <a
+          href="https://github.com/ThuanD/WebCustom/archive/refs/heads/main.zip"
+          class="btn-primary"
+        >
+          ↓ Tải về miễn phí
+        </a>
+        <a href="#install" class="btn-secondary"> 📖 Hướng dẫn cài đặt </a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-n">20+</div>
+          <div class="stat-l">Templates có sẵn</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">0đ</div>
+          <div class="stat-l">Hoàn toàn miễn phí</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">MV3</div>
+          <div class="stat-l">Manifest V3 chuẩn</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">∞</div>
+          <div class="stat-l">Số script không giới hạn</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="reveal">
+        <div class="section-tag">Tính năng</div>
+        <div class="section-title">Một extension,<br />vô số khả năng.</div>
+        <div class="section-sub">
+          Từ ẩn quảng cáo đến tự động hóa phức tạp — tất cả trong một giao diện
+          đơn giản.
+        </div>
+      </div>
+
+      <div class="features-grid reveal">
+        <div class="feat-card">
+          <div class="feat-icon">⚡</div>
+          <div class="feat-title">Auto-inject Scripts</div>
+          <div class="feat-desc">
+            Script tự động chạy ngay khi bạn mở trang. Hỗ trợ URL pattern với
+            wildcard <code>*</code> để match nhiều trang cùng lúc.
+          </div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📋</div>
+          <div class="feat-title">20+ Templates có sẵn</div>
+          <div class="feat-desc">
+            Từ xóa quảng cáo, chặn popup, dark mode, đến monitor giá và gửi
+            Telegram. Dùng ngay không cần code.
+          </div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🤖</div>
+          <div class="feat-title">Viết script bằng AI</div>
+          <div class="feat-desc">
+            Extension tích hợp sẵn prompt mẫu để nhờ ChatGPT viết script theo
+            yêu cầu của bạn. Copy → Paste → Done.
+          </div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🔔</div>
+          <div class="feat-title">Telegram Notifications</div>
+          <div class="feat-desc">
+            Nhận thông báo ngay trên điện thoại khi giá thay đổi, nội dung cập
+            nhật, hoặc bất kỳ sự kiện nào trên trang.
+          </div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🚫</div>
+          <div class="feat-title">Hide Elements</div>
+          <div class="feat-desc">
+            Ẩn phần tử theo CSS selector trực tiếp từ popup — không cần viết
+            code, áp dụng ngay lập tức.
+          </div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🔄</div>
+          <div class="feat-title">SPA Navigation</div>
+          <div class="feat-desc">
+            Tự động detect khi trang thay đổi URL mà không reload (React, Vue,
+            Next.js…) và re-run script đúng lúc.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEMPLATES -->
+    <section id="templates" style="background: var(--bg)">
+      <div class="reveal">
+        <div class="section-tag">Templates</div>
+        <div class="section-title">Cài xong là dùng được.</div>
+        <div class="section-sub">
+          Hơn 20 script viết sẵn, phân loại rõ ràng. Click chọn, điền URL, lưu —
+          xong.
+        </div>
+      </div>
+
+      <div class="templates-row reveal">
+        <div class="tpl-pill">🧹 Xóa quảng cáo</div>
+        <div class="tpl-pill">🚫 Chặn popup mới</div>
+        <div class="tpl-pill">🔓 Xóa paywall</div>
+        <div class="tpl-pill">📜 Sticky header killer</div>
+        <div class="tpl-pill">🎬 YouTube cleaner</div>
+        <div class="tpl-pill">📖 Focus reading mode</div>
+        <div class="tpl-pill">✍️ Auto fill form</div>
+        <div class="tpl-pill">📋 Mục lục tự động</div>
+        <div class="tpl-pill">⏱ Thời gian đọc</div>
+        <div class="tpl-pill">🌙 Force dark mode</div>
+        <div class="tpl-pill">🔤 Custom font</div>
+        <div class="tpl-pill">🔍 Element inspector</div>
+        <div class="tpl-pill">📐 CSS grid overlay</div>
+        <div class="tpl-pill">🗄 Storage viewer</div>
+        <div class="tpl-pill">📊 SEO meta info</div>
+        <div class="tpl-pill">📈 Scroll tracker</div>
+        <div class="tpl-pill">💰 Price monitor</div>
+        <div class="tpl-pill">👁 Text change monitor</div>
+        <div class="tpl-pill">🎟 Coupon finder</div>
+        <div class="tpl-pill">♾ Auto scroll</div>
+        <div class="tpl-pill">🔗 Copy all links</div>
+        <div class="tpl-pill">🖼 Download images</div>
+        <div class="tpl-pill">🐦 Clean Twitter/X</div>
+        <div class="tpl-pill">📘 Clean Facebook</div>
+        <div class="tpl-pill">🔑 Session exporter</div>
+      </div>
+    </section>
+
+    <!-- INSTALL -->
+    <section id="install">
+      <div class="reveal">
+        <div class="section-tag">Cài đặt</div>
+        <div class="section-title">4 bước,<br />dưới 2 phút.</div>
+        <div class="section-sub">
+          Không cần Chrome Web Store. Tải thẳng từ GitHub, cài tay là xong.
+        </div>
+      </div>
+
+      <div class="install-grid reveal">
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Tải file ZIP từ GitHub</div>
+              <div class="step-desc">
+                Vào trang GitHub của extension, nhấn nút xanh
+                <strong>Code → Download ZIP</strong>. Hoặc click thẳng vào link
+                bên dưới.
+                <div class="step-action">
+                  <a
+                    href="https://github.com/ThuanD/WebCustom/archive/refs/heads/main.zip"
+                    class="step-btn"
+                    target="_blank"
+                  >
+                    ↓ Download ZIP
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Giải nén file ZIP</div>
+              <div class="step-desc">
+                Chuột phải vào file vừa tải →
+                <strong>Extract All</strong> (Windows) hoặc double-click
+                (macOS). Bạn sẽ có một thư mục <code>WebCustom-main</code>.
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Bật Developer Mode trong Chrome</div>
+              <div class="step-desc">
+                Mở Chrome, vào <code>chrome://extensions</code>. Bật công tắc
+                <strong>Developer mode</strong> ở góc trên bên phải màn hình.
+                <div class="step-action">
+                  <a href="chrome://extensions" class="step-btn"
+                    >⚙ Mở chrome://extensions</a
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Load thư mục extension</div>
+              <div class="step-desc">
+                Nhấn <strong>Load unpacked</strong> → mở vào thư mục
+                <code>WebCustom-main</code> vừa giải nén → chọn tiếp thư mục con
+                <code>WebCustom-Extension</code>. Extension sẽ xuất hiện ngay
+                trong danh sách và icon ⚡ hiện trên toolbar.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal -->
+        <div class="terminal">
+          <div class="terminal-header">
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+            <div class="term-dot"></div>
+            <div class="term-title">chrome://extensions — Developer Mode</div>
+          </div>
+          <div class="terminal-body">
+            <span class="t-comment"># Bước 1: Tải về</span><br />
+            <span class="t-cmd"
+              >curl -L github.com/ThuanD/WebCustom/archive/main.zip -o
+              WebCustom.zip</span
+            ><br />
+            <span class="t-out">✓ Downloaded WebCustom.zip (42KB)</span><br />
+            <span class="t-gap"></span>
+            <span class="t-comment"># Bước 2: Giải nén</span><br />
+            <span class="t-cmd">unzip WebCustom.zip</span><br />
+            <span class="t-out">✓ Extracted → WebCustom-main/</span><br />
+            <span class="t-gap"></span>
+            <span class="t-comment"># Bước 3: Mở Chrome Extensions</span><br />
+            <span class="t-prompt">→</span>
+            <span class="t-url">chrome://extensions</span><br />
+            <span class="t-prompt">→</span> Enable Developer mode
+            <span class="t-out">✓</span><br />
+            <span class="t-gap"></span>
+            <span class="t-comment"># Bước 4: Load extension</span><br />
+            <span class="t-prompt">→</span> Click "Load unpacked"<br />
+            <span class="t-prompt">→</span> Chọn thư mục
+            <span class="t-url">WebCustom-main/WebCustom-Extension/</span>
+            <span class="t-out">✅ WebCustom v2.0 installed!</span><br />
+            <span class="t-out">⚡ Icon đã xuất hiện trên toolbar</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <div class="reveal">
+        <div class="section-tag">FAQ</div>
+        <div class="section-title">Câu hỏi thường gặp.</div>
+      </div>
+
+      <div class="faq-grid reveal">
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">💸</span> Extension này có miễn phí không?
+          </div>
+          <div class="faq-a">
+            Hoàn toàn miễn phí, mã nguồn mở. Không có tính năng trả phí, không
+            có quảng cáo, không thu thập dữ liệu của bạn.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">🔒</span> Extension có an toàn không?
+          </div>
+          <div class="faq-a">
+            Mã nguồn công khai trên GitHub, bạn có thể đọc từng dòng code trước
+            khi cài. Script chỉ chạy trên các trang bạn chỉ định — không tự động
+            chạy trên tất cả mọi nơi.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">🏪</span> Sao không đăng lên Chrome Web Store?
+          </div>
+          <div class="faq-a">
+            Google thu phí developer $5 để đăng lên store. Extension này hoàn
+            toàn miễn phí nên chúng tôi chia sẻ thẳng qua GitHub. Cài tay chỉ
+            mất 2 phút.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">🔄</span> Có tự cập nhật không?
+          </div>
+          <div class="faq-a">
+            Extension cài từ file không tự cập nhật. Khi có phiên bản mới, bạn
+            tải lại ZIP từ GitHub và làm lại bước 4 (Load unpacked) là xong.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">🤖</span> Không biết code thì có dùng được
+            không?
+          </div>
+          <div class="faq-a">
+            Được. Extension có 20+ template dùng ngay. Nếu cần script riêng, có
+            sẵn prompt mẫu để nhờ ChatGPT viết — bạn chỉ cần mô tả bằng tiếng
+            Việt là được.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">⚠️</span> Script chạy không đúng thì sao?
+          </div>
+          <div class="faq-a">
+            Mở DevTools (<code>F12</code>) → tab Console để xem lỗi. Mỗi script
+            đều có log <code>[WebCustom]</code> để debug. Hoặc dùng nút
+            <strong>▶ Run</strong> trong popup để chạy thử mà không cần reload
+            trang.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">📱</span> Có dùng được trên Firefox không?
+          </div>
+          <div class="faq-a">
+            Hiện tại chỉ hỗ trợ Chrome và các browser Chromium-based (Edge,
+            Brave, Opera…). Firefox dùng API khác nên chưa hỗ trợ.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="q-icon">💾</span> Script lưu ở đâu?
+          </div>
+          <div class="faq-a">
+            Lưu trong <code>chrome.storage.local</code> — chỉ trên máy bạn. Dùng
+            chức năng <strong>Export JSON</strong> trong Settings để backup và
+            chuyển sang máy khác.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section id="cta">
+      <div class="blob-cta"></div>
+      <div class="cta-box reveal">
+        <div class="section-tag" style="display: inline-block">
+          Bắt đầu ngay
+        </div>
+        <div class="section-title">Tải về miễn phí.<br />Cài trong 2 phút.</div>
+        <div class="section-sub">
+          Không cần tài khoản. Không cần trả phí. Không lên store.<br />Chỉ cần
+          tải ZIP và load vào Chrome.
+        </div>
+        <div class="hero-btns" style="justify-content: center">
+          <a
+            href="https://github.com/ThuanD/WebCustom/archive/refs/heads/main.zip"
+            class="btn-primary"
+          >
+            ↓ Download ZIP từ GitHub
+          </a>
+          <a
+            href="https://github.com/ThuanD/WebCustom"
+            class="btn-secondary"
+            target="_blank"
+          >
+            ★ Star on GitHub
+          </a>
+          <a
+            href="https://www.buymeacoffee.com/thuandv"
+            target="_blank"
+            class="btn-secondary"
+            style="border-color: rgba(245, 166, 35, 0.3); color: var(--warn)"
+          >
+            🍭 Buy me a Chupa Chups
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="footer-brand">
+        <div
+          class="nav-icon"
+          style="width: 26px; height: 26px; font-size: 13px"
+        >
+          ⚡
+        </div>
+        <span
+          style="
+            font-family: &quot;Syne&quot;, sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+          "
+          >Web<span style="color: var(--accent)">Custom</span></span
+        >
+      </div>
+      <div class="footer-copy">Miễn phí · Mã nguồn mở · Không quảng cáo</div>
+      <div class="footer-links">
+        <a href="https://github.com/ThuanD/WebCustom" target="_blank">GitHub</a>
+        <a href="#install">Cài đặt</a>
+        <a href="#faq">FAQ</a>
+      </div>
+    </footer>
+
+    <script>
+      // Scroll reveal
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry, i) => {
+            if (entry.isIntersecting) {
+              setTimeout(() => entry.target.classList.add("visible"), i * 80);
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.1 },
+      );
+
+      document
+        .querySelectorAll(".reveal")
+        .forEach((el) => observer.observe(el));
+
+      // Smooth active nav highlight
+      const sections = document.querySelectorAll("section[id]");
+      const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+
+      window.addEventListener("scroll", () => {
+        let current = "";
+        sections.forEach((s) => {
+          if (window.scrollY >= s.offsetTop - 100) current = s.id;
+        });
+        navLinks.forEach((a) => {
+          a.style.color =
+            a.getAttribute("href") === `#${current}` ? "var(--accent)" : "";
+        });
+      });
+    </script>
+  </body>
+</html>

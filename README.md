@@ -1,170 +1,124 @@
-# Web Customizer - Chrome Extension
+# ⚡ WebCustom
 
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-blue.svg)](https://developer.chrome.com/extensions)
-[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](#)
+> Tự động chạy JavaScript trên bất kỳ trang web nào — miễn phí, mã nguồn mở, không cần Chrome Web Store.
 
-**Web Customizer** is a powerful Chrome extension that allows you to automatically run custom JavaScript snippets on specific websites. You can easily manage and execute scripts by domain to customize your web experience according to your preferences.
-
-## ✨ Key Features
-
-- 🚀 **Auto-inject Scripts**: Automatically run scripts when accessing specified websites
-- 📁 **Domain-based Management**: Store and manage scripts separately for each domain
-- 🎯 **Intuitive UI**: Simple popup for quick script execution, advanced options page for detailed management
-- 🔄 **Synchronization**: Scripts are synchronized via Chrome Sync across devices
-- 🛠️ **Easy to Use**: User-friendly interface, no advanced programming knowledge required
-
-## 📋 System Requirements
-
-- Google Chrome or Chromium-based browser (version 88+)
-- Supports Manifest V3
-
-## 🛠️ Installation
-
-### 1. Prepare the Extension
-
-Ensure your project directory contains all the following files:
-
-```
-web-customizer/
-├── manifest.json          # Extension configuration
-├── background.js          # Background script
-├── content.js             # Main content script
-├── popup.html             # Popup interface
-├── popup.js               # Popup logic
-├── options.html           # Scripts management page
-├── options.js             # Management logic
-└── icons/                 # Icons directory
-    ├── icon16.png         # 16x16px icon
-    ├── icon48.png         # 48x48px icon
-    └── icon128.png        # 128x128px icon
-```
-
-### 2. Load Extension in Chrome
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (top right corner)
-3. Click **Load unpacked**
-4. Select the `web-customizer` directory
-5. The extension will appear in the list and is ready to use
-
-### 3. Grant Permissions (if needed)
-
-The extension will request access to:
-- Storage to save scripts
-- Active tab to run scripts on the current page
-- Scripting to execute JavaScript code
-
-## 📖 Usage Guide
-
-### Adding a New Script
-
-1. **Open the page you want to customize** (e.g., `https://example.com`)
-2. **Click the extension icon** in the Chrome toolbar
-3. **Select "Manage All Scripts"** to open the management page
-4. **Click "+ Add New Script"**
-5. **Fill in the information**:
-   - **Script Name**: Easy-to-recognize name
-   - **URL Pattern**: Pattern to match pages (e.g., `*.example.com` or `https://example.com/*`)
-   - **Description**: Description of script functionality
-   - **JavaScript Code**: The code snippet to run
-
-### Script Examples
-
-#### 1. Auto-skip Ads (Skip Ads)
-```javascript
-// Pattern: *.youtube.com
-setTimeout(() => {
-    const skipButton = document.querySelector('.ytp-ad-skip-button');
-    if (skipButton) skipButton.click();
-}, 1000);
-```
-
-#### 2. Change Page Background Color
-```javascript
-// Pattern: github.com
-document.body.style.backgroundColor = '#f0f0f0';
-```
-
-#### 3. Auto-login
-```javascript
-// Pattern: *.facebook.com
-document.getElementById('email').value = 'your@email.com';
-document.getElementById('pass').value = 'yourpassword';
-```
-
-### Quick Script Execution
-
-1. **Open a page with configured scripts**
-2. **Click the extension icon**
-3. **Click "Run Now"** next to the script you want to execute
-4. The script will execute immediately on the current page
-
-### Script Management
-
-- **Edit**: Click "Edit" to modify script information
-- **Delete**: Click "Delete" to remove unnecessary scripts
-- **View Source**: Click "View Code" to see script content
-
-## 🏗️ Project Structure
-
-```
-web-customizer/
-├── manifest.json          # Manifest V3 configuration
-├── background.js          # Service worker handling storage and messages
-├── content.js             # Inject scripts into web pages
-├── popup.html             # Popup interface
-├── popup.js               # Popup handling logic
-├── options.html           # Scripts management page
-├── options.js             # Detailed management logic
-└── icons/
-    ├── icon16.png         # Small icon for toolbar
-    ├── icon48.png         # Medium icon
-    └── icon128.png        # Large icon for Chrome Web Store
-```
-
-## 🔧 Development and Customization
-
-### Adding New Features
-
-1. **Modify Content Script** (`content.js`): Add script execution logic
-2. **Update Background** (`background.js`): Add new storage handling
-3. **Upgrade UI**: Edit `popup.html` and `options.html`
-
-### Debugging
-
-- Open **Developer Tools** in the extensions page
-- Check **Console** for errors and messages
-- Use `console.log()` in scripts for debugging
-
-## ⚠️ Important Notes
-
-- **Security**: Only run scripts from trusted sources
-- **Permissions**: Extension requires access to all websites - please review carefully before installation
-- **Performance**: Heavy scripts may slow down web pages
-- **Updates**: When updating the extension, reload it in `chrome://extensions/`
-
-## 🆘 Troubleshooting
-
-**Scripts not running?**
-- Check if the URL Pattern matches the current page
-- Ensure JavaScript code has no syntax errors
-- Reload the page and try again
-
-**Extension not working?**
-- Verify Developer Mode is enabled
-- Ensure file paths are correct
-- Restart Chrome if necessary
-
-**Storage not syncing?**
-- Sign in with the same Google account on all devices
-- Check if storage capacity is sufficient
-
-## 📄 License
-
-This project is developed for educational purposes and personal use. Please respect Chrome Web Store terms when publishing.
-
-## 🤝 Contributing
-
-If you want to contribute or report bugs, please create an issue in the repository or contact directly.
+![Version](https://img.shields.io/badge/version-2.0.2-3dd6f5?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-7c6cf8?style=flat-square)
+![Manifest](https://img.shields.io/badge/manifest-v3-2dd4a0?style=flat-square)
+![Price](https://img.shields.io/badge/price-free-f5a623?style=flat-square)
 
 ---
+
+## Giới thiệu
+
+**WebCustom** là Chrome extension cho phép bạn tự động chạy đoạn JavaScript bất kỳ mỗi khi mở một trang web cụ thể. Dùng để ẩn quảng cáo, tự điền form, theo dõi giá, nhận thông báo Telegram — và rất nhiều thứ khác.
+
+Không cần biết lập trình. Extension có sẵn 20+ template, tích hợp prompt để nhờ ChatGPT viết script theo yêu cầu của bạn.
+
+## Tính năng
+
+- **Auto-inject Scripts** — Script tự động chạy khi load trang, hỗ trợ URL pattern với wildcard `*`
+- **20+ Templates** — Dùng ngay không cần code: xóa quảng cáo, dark mode, monitor giá, clean YouTube/Facebook/Twitter...
+- **AI-assisted** — Prompt mẫu tích hợp sẵn để nhờ ChatGPT/Gemini viết script theo yêu cầu
+- **Hide Elements** — Ẩn phần tử theo CSS selector trực tiếp từ popup, không cần viết code
+- **Telegram Notifications** — Nhận thông báo điện thoại khi giá thay đổi hoặc nội dung cập nhật
+- **SPA Support** — Tự động detect URL thay đổi trong React/Vue/Next.js và re-run script đúng lúc
+- **Export/Import** — Backup toàn bộ scripts ra JSON, chuyển sang máy khác dễ dàng
+- **CSP Bypass** — Dùng kỹ thuật nonce stealing để chạy script trên các trang có Content Security Policy nghiêm ngặt
+
+## Cài đặt
+
+Vì extension không có trên Chrome Web Store (Google thu phí $5 developer), bạn cài tay theo 4 bước:
+
+### Bước 1 — Tải về
+
+Tải file ZIP từ nút **Code → Download ZIP** trên GitHub, hoặc clone:
+
+```bash
+git clone https://github.com/ThuanD/WebCustom.git
+```
+
+### Bước 2 — Giải nén
+
+Giải nén file ZIP. Bạn sẽ có thư mục `WebCustom-main/`.
+
+### Bước 3 — Bật Developer Mode
+
+Mở Chrome, vào `chrome://extensions`, bật công tắc **Developer mode** góc trên bên phải.
+
+### Bước 4 — Load extension
+
+Nhấn **Load unpacked** → mở vào thư mục `WebCustom-main` → chọn tiếp thư mục con **`WebCustom-Extension`**.
+
+Icon ⚡ sẽ xuất hiện trên toolbar — cài đặt hoàn tất.
+
+## Cấu trúc project
+
+```
+WebCustom/
+├── WebCustom-Extension/     # Source code extension
+│   ├── manifest.json        # Manifest V3 config
+│   ├── background.js        # Service worker: storage, messaging
+│   ├── content.js           # Script runner: inject & execute
+│   ├── popup.html/js        # Popup UI
+│   ├── options.html/js      # Script manager (full UI)
+│   ├── templates.js         # 20+ script templates
+│   └── icons/               # Extension icons
+├── index.html               # Landing page
+├── og-image.png             # OG image cho social share
+├── site.webmanifest         # Web app manifest
+├── robots.txt
+├── sitemap.xml
+└── README.md
+```
+
+## Hướng dẫn sử dụng
+
+### Dùng template có sẵn
+
+1. Click icon ⚡ trên toolbar → **Manage All Scripts**
+2. Vào tab **📋 Templates**, chọn template phù hợp
+3. Điền **URL Pattern** — trang nào bạn muốn script chạy (ví dụ: `*.youtube.com`)
+4. Nhấn **＋ Add Script** → reload trang là xong
+
+### Viết script bằng AI
+
+1. Vào tab **📖 Guide** trong Options page
+2. Copy một trong các **prompt mẫu** theo loại việc bạn muốn làm
+3. Paste vào ChatGPT, mô tả yêu cầu → nhận code
+4. Tạo script mới, paste code vào, điền URL Pattern → lưu
+
+### URL Pattern
+
+| Pattern | Ý nghĩa |
+|---|---|
+| `*` | Chạy trên mọi trang |
+| `*.youtube.com` | Mọi trang YouTube |
+| `*.tiki.vn/product/*` | Chỉ trang sản phẩm Tiki |
+| `https://docs.google.com/*` | Mọi Google Docs |
+
+## Cảnh báo bảo mật
+
+Script JavaScript có thể **đọc mọi nội dung trên trang**, bao gồm mật khẩu, cookie, thông tin thẻ ngân hàng.
+
+- **Không** paste code từ người lạ gửi qua mạng xã hội, Zalo, Telegram
+- **Không** chạy script trên trang ngân hàng, ví điện tử, trang đăng nhập quan trọng
+- **Nên** đọc kỹ code hoặc nhờ ChatGPT giải thích trước khi chạy
+
+## Đóng góp
+
+Pull request và issue luôn được chào đón. Một số hướng đóng góp:
+
+- Thêm template mới vào `templates.js`
+- Fix bug, cải thiện tính năng
+- Cải thiện UI/UX
+
+## Ủng hộ
+
+Nếu extension hữu ích với bạn, hãy ủng hộ tác giả một que Chupa Chups ☕
+
+[![Buy me a Chupa Chups](https://img.shields.io/badge/Buy%20me%20a%20Chupa%20Chups-🍭-f5a623?style=flat-square)](https://www.buymeacoffee.com/thuandv)
+
+## License
+
+[MIT](LICENSE) — Tự do sử dụng, chỉnh sửa và phân phối.

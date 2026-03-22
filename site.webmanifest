@@ -1,0 +1,26 @@
+{
+  "name": "WebCustom — Tự động chạy script trên bất kỳ trang web nào",
+  "short_name": "WebCustom",
+  "description": "Chrome extension miễn phí giúp tự động chạy JavaScript trên bất kỳ trang web nào.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#080a10",
+  "theme_color": "#080a10",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/ThuanD/WebCustom/main/WebCustom-Extension/icons/icon128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ]
+}
