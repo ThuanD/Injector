@@ -50,28 +50,119 @@ const SCRIPT_TEMPLATES = {
   blockNewWindows: {
     name: "Block New Windows & Tabs",
     description:
-      "Chặn trang web mở cửa sổ/tab mới tự động. Link _blank sẽ mở trong tab hiện tại thay vì tab mới.",
+      "Chặn tab quảng cáo dạng click-hijack phổ biến trên trang truyện tranh VN.",
     category: "🧹 DOM Cleanup",
     code: `(function blockNewWindows() {
-  // Chặn window.open()
-  window.open = function() {
-    console.log('[WebCustom] Blocked window.open:', arguments[0]);
+  'use strict';
+
+  const log = (...args) => console.log('[WebCustom]', ...args);
+
+  // ── 1. Hard override window.open ──
+  const blockOpen = function(url) {
+    log('Blocked window.open:', url);
+    if (url && url !== 'about:blank' && !/^javascript:/i.test(url)) {
+      location.href = url;
+    }
     return null;
   };
 
-  // Chặn link target="_blank" / "_new"
-  document.addEventListener('click', function(e) {
-    const link = e.target.closest('a[target="_blank"], a[target="_new"]');
-    if (link) {
-      e.preventDefault();
-      e.stopPropagation();
-      // Mở trong tab hiện tại — xóa dòng dưới nếu muốn chặn hoàn toàn
-      if (link.href && link.href !== '#') window.location.href = link.href;
-      console.log('[WebCustom] Blocked new tab:', link.href);
-    }
-  }, true);
+  try {
+    Object.defineProperty(window, 'open', {
+      value: blockOpen,
+      writable: false,
+      configurable: false,
+    });
+  } catch (e) {
+    window.open = blockOpen;
+  }
 
-  console.log('[WebCustom] New window/tab blocking enabled');
+  // Backup: chặn cả self / top / parent
+  ['self', 'top', 'parent'].forEach(obj => {
+    try {
+      if (window[obj]) {
+        window[obj].open = blockOpen;
+      }
+    } catch {}
+  });
+
+  // ── 2. Fix tất cả link target ──
+  const fixLink = (a) => {
+    if (!a || a.tagName !== 'A') return;
+    if (a.target && a.target !== '_self') {
+      a.target = '_self';
+    }
+  };
+
+  const fixLinks = (root = document) => {
+    root.querySelectorAll?.('a[target]').forEach(fixLink);
+  };
+
+  fixLinks();
+
+  // ── 3. MutationObserver ──
+  new MutationObserver(mutations => {
+    for (const m of mutations) {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'A') fixLink(n);
+        else fixLinks(n);
+      }
+    }
+  }).observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+
+  // ── 4. Chặn click hijack ──
+  const intercept = (e) => {
+    const a = e.target?.closest?.('a');
+
+    if (a) {
+      if (a.target && a.target !== '_self') {
+        log('Force same-tab:', a.href);
+        a.target = '_self';
+      }
+    }
+
+    // Nếu script cố mở popup
+    const oldOpen = window.open;
+    window.open = function(url) {
+      log('Blocked (event) window.open:', url);
+      if (url) location.href = url;
+      return null;
+    };
+
+    // restore sau tick
+    setTimeout(() => {
+      window.open = oldOpen;
+    }, 0);
+  };
+
+  ['click', 'mousedown', 'pointerdown'].forEach(evt => {
+    document.addEventListener(evt, intercept, {
+      capture: true,
+      passive: false // ⚠️ quan trọng
+    });
+  });
+
+  // ── 5. Override click() ──
+  const _click = HTMLElement.prototype.click;
+  HTMLElement.prototype.click = function() {
+    if (this.tagName === 'A') {
+      fixLink(this);
+    }
+    return _click.apply(this, arguments);
+  };
+
+  // ── 6. Chặn window features (popup specs) ──
+  const originalOpen = window.open;
+  window.open = function(url, name, specs) {
+    log('Blocked popup specs:', specs);
+    if (url) location.href = url;
+    return null;
+  };
+
+  log('Block active (strong mode)');
 })();`,
   },
 
