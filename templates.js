@@ -123,19 +123,6 @@ const SCRIPT_TEMPLATES = {
         a.target = '_self';
       }
     }
-
-    // Nếu script cố mở popup
-    const oldOpen = window.open;
-    window.open = function(url) {
-      log('Blocked (event) window.open:', url);
-      if (url) location.href = url;
-      return null;
-    };
-
-    // restore sau tick
-    setTimeout(() => {
-      window.open = oldOpen;
-    }, 0);
   };
 
   ['click', 'mousedown', 'pointerdown'].forEach(evt => {
@@ -152,14 +139,6 @@ const SCRIPT_TEMPLATES = {
       fixLink(this);
     }
     return _click.apply(this, arguments);
-  };
-
-  // ── 6. Chặn window features (popup specs) ──
-  const originalOpen = window.open;
-  window.open = function(url, name, specs) {
-    log('Blocked popup specs:', specs);
-    if (url) location.href = url;
-    return null;
   };
 
   log('Block active (strong mode)');

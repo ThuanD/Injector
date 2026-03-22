@@ -162,7 +162,7 @@ class PopupManager {
       <div class="script-actions">
         <button class="action-btn run" title="Run now">▶ Run</button>
         <button class="action-btn edit" title="Edit script">✏ Edit</button>
-        <button class="action-btn copy" title="Copy code">⎘ Copy</button>
+        <button class="action-btn del" title="Delete script">🗑 Delete</button>
       </div>
     `;
 
@@ -184,10 +184,16 @@ class PopupManager {
           encodeURIComponent(script.id),
       });
     });
-    div.querySelector(".copy").addEventListener("click", () => {
-      navigator.clipboard
-        .writeText(script.code || "")
-        .then(() => this.toast("Code copied!", "success"));
+    div.querySelector(".del").addEventListener("click", () => {
+      if (!confirm(`Delete "${script.name}"?`)) return;
+      chrome.storage.local.get("userScripts", (result) => {
+        const all = result.userScripts || {};
+        delete all[script.id];
+        chrome.storage.local.set({ userScripts: all }, () => {
+          this.toast(`"${script.name}" deleted`, "");
+          this.loadScripts();
+        });
+      });
     });
 
     return div;

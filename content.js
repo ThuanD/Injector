@@ -41,13 +41,15 @@ class ScriptRunner {
   runScripts() {
     const currentUrl = window.location.href;
 
-    Object.entries(this.scripts).forEach(([pattern, script]) => {
+    Object.entries(this.scripts).forEach(([id, script]) => {
+      // Dùng script.pattern thay vì key
+      const pattern = script.pattern || id; // fallback cho script cũ (legacy)
+
       if (
         script.enabled !== false &&
         this.urlMatchesPattern(currentUrl, pattern)
       ) {
-        // Key theo cả URL để SPA navigation trigger đúng
-        const scriptKey = `${pattern}::${currentUrl}`;
+        const scriptKey = `${id}::${currentUrl}`;
 
         if (!this.executedScripts.has(scriptKey)) {
           this.scheduleExecution(scriptKey, script.code, pattern, script.name);
