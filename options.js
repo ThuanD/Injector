@@ -249,7 +249,7 @@ class OptionsManager {
         </div>
         <div class="form-group">
           <label class="form-label">URL Pattern <span class="req">*</span></label>
-          <input type="text" id="f-pattern" class="form-input" placeholder="*.example.com" value="${this.esc(editId || '')}">
+          <input type="text" id="f-pattern" class="form-input" placeholder="*.example.com" value="${this.esc(s?.pattern || '')}">
         </div>
         <div class="form-group full">
           <label class="form-label">Description</label>

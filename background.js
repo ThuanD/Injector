@@ -107,14 +107,20 @@ class BackgroundScriptManager {
             sendResponse,
           );
           break;
-        case "executeScriptInMainWorld":
+        case "executeScriptInMainWorld": {
+          const tabId = request.tabId ?? sender.tab?.id;
+          if (!tabId) {
+            sendResponse({ error: "No tab ID available" });
+            break;
+          }
           await this.executeScriptInMainWorld(
-            sender.tab.id,
+            tabId,
             request.code,
             request.scriptId,
             sendResponse,
           );
           break;
+        }
         case "getSettings":
           await this.getSettings(sendResponse);
           break;
