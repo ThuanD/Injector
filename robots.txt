@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://webcustom.thuandv.top/sitemap.xml
+Sitemap: https://injector.thuandv.top/sitemap.xml

@@ -617,7 +617,7 @@ class OptionsManager {
     const blob = new Blob([data], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = `webcustom-${Date.now()}.json`;
+    a.href = url; a.download = `injector-${Date.now()}.json`;
     a.click(); URL.revokeObjectURL(url);
     this.toast('Scripts exported ↓', 'success');
   }
@@ -662,7 +662,7 @@ Requirements:
 - Wrapped in an IIFE: (function() { ... })();
 - Vanilla JS only, no external libraries
 - Use MutationObserver to also hide elements that load dynamically
-- Add console.log('[WebCustom] Done') at the end
+- Add console.log('[Injector] Done') at the end
 - Put configurable selectors as constants at the top with comments`,
       },
       {
@@ -675,7 +675,7 @@ Requirements:
 - Wrapped in an IIFE: (function() { ... })();
 - Vanilla JS only, no external libraries
 - Handle the case where the element might not exist yet (use setTimeout or MutationObserver)
-- Add console.log('[WebCustom] Done') at the end
+- Add console.log('[Injector] Done') at the end
 - Put any configurable values (selectors, credentials, timing) as constants at the top`,
       },
       {
@@ -703,7 +703,7 @@ Requirements:
 - Vanilla JS only — inject a <style> tag with CSS, do not use external stylesheets
 - Use !important on CSS rules to override site styles
 - The script should be toggleable: running it again should undo the changes
-- Add console.log('[WebCustom] Style applied/removed') at the end`,
+- Add console.log('[Injector] Style applied/removed') at the end`,
       },
       {
         label: 'Thu thập dữ liệu',
@@ -729,7 +729,7 @@ Mục tiêu: [MÔ TẢ ĐIỀU BẠN MUỐN SCRIPT LÀM - càng chi tiết càng
 Yêu cầu kỹ thuật (bắt buộc để script hoạt động với extension của tôi):
 - Bọc trong IIFE: (function() { ... })();
 - Chỉ dùng vanilla JavaScript, không dùng thư viện ngoài
-- Thêm console.log('[WebCustom] Done') ở cuối
+- Thêm console.log('[Injector] Done') ở cuối
 - Các giá trị có thể cấu hình (CSS selector, thời gian, text...) đặt thành hằng số ở đầu file kèm comment giải thích
 - Nếu cần xử lý element load động, dùng MutationObserver hoặc setTimeout
 

@@ -1,5 +1,5 @@
 /**
- * ScriptRunner - Content script for the Web Customizer Chrome extension
+ * ScriptRunner - Content script for the Injector Chrome extension
  */
 class ScriptRunner {
   constructor() {

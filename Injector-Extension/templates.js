@@ -1,5 +1,5 @@
 // ============================================================
-// WebCustom — Script Templates
+// Injector — Script Templates
 // ============================================================
 
 const SCRIPT_TEMPLATES = {
@@ -43,7 +43,7 @@ const SCRIPT_TEMPLATES = {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  console.log('[WebCustom] Removed ' + removed + ' ad elements');
+  console.log('[Injector] Removed ' + removed + ' ad elements');
 })();`,
   },
 
@@ -55,7 +55,7 @@ const SCRIPT_TEMPLATES = {
     code: `(function blockNewWindows() {
   'use strict';
 
-  const log = (...args) => console.log('[WebCustom]', ...args);
+  const log = (...args) => console.log('[Injector]', ...args);
 
   // ── 1. Hard override window.open ──
   const blockOpen = function(url) {
@@ -185,7 +185,7 @@ const SCRIPT_TEMPLATES = {
     el.style.webkitFilter = '';
   });
 
-  console.log('[WebCustom] Paywall removed, scroll restored');
+  console.log('[Injector] Paywall removed, scroll restored');
 })();`,
   },
 
@@ -219,7 +219,7 @@ const SCRIPT_TEMPLATES = {
   document.body.style.paddingTop = '0';
   document.body.style.marginTop  = '0';
 
-  console.log('[WebCustom] Removed ' + removed + ' sticky bars');
+  console.log('[Injector] Removed ' + removed + ' sticky bars');
 })();`,
   },
 
@@ -255,7 +255,7 @@ const SCRIPT_TEMPLATES = {
   \`;
 
   const style = document.createElement('style');
-  style.id = 'webcustom-yt-clean';
+  style.id = 'injector-yt-clean';
   style.textContent = css;
   document.head.appendChild(style);
 
@@ -272,7 +272,7 @@ const SCRIPT_TEMPLATES = {
   }
   setInterval(skipAd, 800);
 
-  console.log('[WebCustom] YouTube cleaned');
+  console.log('[Injector] YouTube cleaned');
 })();`,
   },
 
@@ -315,14 +315,14 @@ const SCRIPT_TEMPLATES = {
   }
 
   if (!content) {
-    console.warn('[WebCustom] Could not find main content');
+    console.warn('[Injector] Could not find main content');
     return;
   }
 
   // Clone và hiển thị nội dung trong overlay
   const clone = content.cloneNode(true);
   const overlay = document.createElement('div');
-  overlay.id = 'webcustom-focus';
+  overlay.id = 'injector-focus';
   overlay.style.cssText = \`
     position: fixed; inset: 0; z-index: 999999;
     background: #fafaf8;
@@ -418,7 +418,7 @@ const SCRIPT_TEMPLATES = {
     }
   });
 
-  console.log('[WebCustom] Filled ' + filled + ' fields');
+  console.log('[Injector] Filled ' + filled + ' fields');
 })();`,
   },
 
@@ -430,7 +430,7 @@ const SCRIPT_TEMPLATES = {
     code: `(function generateTOC() {
   const headings = document.querySelectorAll('h1, h2, h3');
   if (headings.length < 3) {
-    console.log('[WebCustom] Not enough headings for TOC');
+    console.log('[Injector] Not enough headings for TOC');
     return;
   }
 
@@ -454,7 +454,7 @@ const SCRIPT_TEMPLATES = {
   }).join('');
 
   const toc = document.createElement('div');
-  toc.id    = 'webcustom-toc';
+  toc.id    = 'injector-toc';
   toc.innerHTML = \`
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5a6480;margin-bottom:10px">
       📋 Table of Contents
@@ -538,11 +538,11 @@ const SCRIPT_TEMPLATES = {
       "Bật dark mode cho bất kỳ trang nào bằng CSS filter invert. Ảnh và video được giữ nguyên màu.",
     category: "🎨 Styling",
     code: `(function forceDarkMode() {
-  const id = 'webcustom-darkmode';
+  const id = 'injector-darkmode';
   if (document.getElementById(id)) {
     document.getElementById(id).remove();
     document.documentElement.style.colorScheme = '';
-    console.log('[WebCustom] Dark mode OFF');
+    console.log('[Injector] Dark mode OFF');
     return;
   }
 
@@ -569,7 +569,7 @@ const SCRIPT_TEMPLATES = {
   document.head.appendChild(style);
   document.documentElement.style.colorScheme = 'dark';
 
-  console.log('[WebCustom] Dark mode ON (press the button again to toggle OFF)');
+  console.log('[Injector] Dark mode ON (press the button again to toggle OFF)');
 })();`,
   },
 
@@ -610,7 +610,7 @@ const SCRIPT_TEMPLATES = {
     }
   \`;
 
-  const id = 'webcustom-font';
+  const id = 'injector-font';
   const existing = document.getElementById(id);
   if (existing) existing.remove();
 
@@ -619,7 +619,7 @@ const SCRIPT_TEMPLATES = {
   style.textContent = css;
   document.head.appendChild(style);
 
-  console.log('[WebCustom] Font changed to: ' + FONT_NAME);
+  console.log('[Injector] Font changed to: ' + FONT_NAME);
 })();`,
   },
 
@@ -637,7 +637,7 @@ const SCRIPT_TEMPLATES = {
   document.body.style.transformOrigin = 'top left';
   document.body.style.width           = (100 / ZOOM_LEVEL) + '%';
 
-  console.log('[WebCustom] Zoom set to ' + (ZOOM_LEVEL * 100) + '%');
+  console.log('[Injector] Zoom set to ' + (ZOOM_LEVEL * 100) + '%');
 })();`,
   },
 
@@ -697,11 +697,11 @@ const SCRIPT_TEMPLATES = {
     if (e.key === 'Escape') {
       tooltip.remove();
       if (lastEl) lastEl.style.outline = '';
-      console.log('[WebCustom] Inspector OFF');
+      console.log('[Injector] Inspector OFF');
     }
   });
 
-  console.log('[WebCustom] Inspector ON — hover to inspect, ESC to exit');
+  console.log('[Injector] Inspector ON — hover to inspect, ESC to exit');
 })();`,
   },
 
@@ -711,7 +711,7 @@ const SCRIPT_TEMPLATES = {
       "Hiển thị đường kẻ 8px grid để kiểm tra layout. Click lại vào bookmarklet để toggle.",
     category: "🔧 Developer Tools",
     code: `(function gridOverlay() {
-  const id = 'webcustom-grid';
+  const id = 'injector-grid';
   const existing = document.getElementById(id);
   if (existing) { existing.remove(); return; }
 
@@ -740,7 +740,7 @@ const SCRIPT_TEMPLATES = {
     }
   \`;
   document.head.appendChild(style);
-  console.log('[WebCustom] Grid overlay ON — run again to toggle OFF');
+  console.log('[Injector] Grid overlay ON — run again to toggle OFF');
 })();`,
   },
 
@@ -885,7 +885,7 @@ const SCRIPT_TEMPLATES = {
       "Theo dõi và hiển thị thanh tiến trình đọc bài viết ở đầu trang.",
     category: "📊 Page Analytics",
     code: `(function scrollDepthTracker() {
-  const id = 'webcustom-progress';
+  const id = 'injector-progress';
   if (document.getElementById(id)) { document.getElementById(id).remove(); return; }
 
   const bar = document.createElement('div');
@@ -916,7 +916,7 @@ const SCRIPT_TEMPLATES = {
     pct.textContent = progress + '%';
   });
 
-  console.log('[WebCustom] Scroll tracker ON — run again to toggle OFF');
+  console.log('[Injector] Scroll tracker ON — run again to toggle OFF');
 })();`,
   },
 
@@ -1142,7 +1142,7 @@ const SCRIPT_TEMPLATES = {
   const PAUSE_AT_BOTTOM = 2000; // ms dừng lại khi đến cuối để chờ load thêm
   const MAX_SCROLLS   = 50;    // giới hạn số lần scroll đến cuối (0 = không giới hạn)
 
-  const id = 'webcustom-autoscroll';
+  const id = 'injector-autoscroll';
   if (window[id]) {
     clearInterval(window[id]);
     window[id] = null;
@@ -1201,7 +1201,7 @@ const SCRIPT_TEMPLATES = {
   )];
 
   if (links.length === 0) {
-    console.log('[WebCustom] No links found');
+    console.log('[Injector] No links found');
     return;
   }
 
@@ -1219,7 +1219,7 @@ const SCRIPT_TEMPLATES = {
     setTimeout(() => toast.remove(), 2500);
   });
 
-  console.log('[WebCustom] Copied', links.length, 'links');
+  console.log('[Injector] Copied', links.length, 'links');
 })();`,
   },
 
@@ -1242,7 +1242,7 @@ const SCRIPT_TEMPLATES = {
     });
 
   if (imgs.length === 0) {
-    console.log('[WebCustom] No qualifying images found');
+    console.log('[Injector] No qualifying images found');
     return;
   }
 
@@ -1261,7 +1261,7 @@ const SCRIPT_TEMPLATES = {
     }, i * 300); // delay để tránh browser block
   });
 
-  console.log('[WebCustom] Downloading', toDownload.length, 'images...');
+  console.log('[Injector] Downloading', toDownload.length, 'images...');
 })();`,
   },
 
@@ -1297,11 +1297,11 @@ const SCRIPT_TEMPLATES = {
   \`;
 
   const style = document.createElement('style');
-  style.id = 'webcustom-twitter-clean';
+  style.id = 'injector-twitter-clean';
   style.textContent = css;
   document.head.appendChild(style);
 
-  console.log('[WebCustom] Twitter/X cleaned');
+  console.log('[Injector] Twitter/X cleaned');
 })();`,
   },
 
@@ -1334,7 +1334,7 @@ const SCRIPT_TEMPLATES = {
   \`;
 
   const style = document.createElement('style');
-  style.id = 'webcustom-fb-clean';
+  style.id = 'injector-fb-clean';
   style.textContent = css;
   document.head.appendChild(style);
 
@@ -1345,7 +1345,7 @@ const SCRIPT_TEMPLATES = {
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  console.log('[WebCustom] Facebook cleaned');
+  console.log('[Injector] Facebook cleaned');
 })();`,
   },
 

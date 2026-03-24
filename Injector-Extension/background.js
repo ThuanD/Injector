@@ -1,5 +1,5 @@
 /**
- * BackgroundScriptManager - Main background script for the Web Customizer Chrome extension
+ * BackgroundScriptManager - Main background script for the Injector Chrome extension
  *
  * This class manages:
  * - Chrome extension lifecycle events (install, messages)
@@ -28,7 +28,7 @@ class BackgroundScriptManager {
     chrome.runtime.onInstalled.addListener(async (details) => {
       if (details.reason === "install") {
         await this.initializeStorage();
-        console.log("✅ Web Customizer installed");
+        console.log("✅ Injector installed");
       }
     });
 
@@ -302,9 +302,9 @@ class BackgroundScriptManager {
 (function() {
     try {
         ${scriptCode}
-        console.log('[WebCustomizer] ✅ Script executed: ${scriptName}');
+        console.log('[Injector] ✅ Script executed: ${scriptName}');
     } catch (error) {
-        console.error('[WebCustomizer] Script execution error in "${scriptName}":', error);
+        console.error('[Injector] Script execution error in "${scriptName}":', error);
     }
 })();
                         `;
@@ -344,7 +344,7 @@ class BackgroundScriptManager {
             // 5. Cleanup
             script.remove();
           } catch (error) {
-            console.error("[WebCustomizer] Injection error:", error);
+            console.error("[Injector] Injection error:", error);
             throw error;
           }
         },

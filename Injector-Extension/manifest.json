@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Web Customizer - Auto-inject your scripts",
-  "short_name": "WebCustomizer",
+  "name": "Injector - Auto-inject your scripts",
+  "short_name": "Injector",
   "version": "2.0.2",
   "description": "Run custom JavaScript code on specific websites automatically. Manage scripts per domain.",
   "icons": {
@@ -16,7 +16,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Web Customizer - Manage your scripts"
+    "default_title": "Injector - Manage your scripts"
   },
   "content_scripts": [
     {
