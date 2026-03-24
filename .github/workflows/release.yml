@@ -1,0 +1,77 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Create release directory
+      run: mkdir -p release
+      
+    - name: Copy extension files
+      run: |
+        mkdir -p release/Injector-Extension
+        cp -r Injector-Extension/* release/Injector-Extension/
+        
+    - name: Create zip file
+      run: |
+        cd release
+        zip -r Injector-Extension.zip Injector-Extension/
+        
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release/Injector-Extension.zip
+        name: Injector v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## Injector v${{ steps.get_version.outputs.VERSION }}
+          
+          📦 **Download:**
+          - `Injector-Extension.zip` - Chrome extension (Manifest V3)
+          
+          🚀 **Installation:**
+          1. Download `Injector-Extension.zip`
+          2. Extract to `Injector-main/` folder
+          3. Open Chrome → `chrome://extensions`
+          4. Enable Developer Mode
+          5. Click "Load unpacked" → Select `Injector-main/Injector-Extension/`
+          
+          ---
+          
+          📋 **Changes:**
+          - Auto-generated release from tag v${{ steps.get_version.outputs.VERSION }}
+          
+          ⚡ **Features:**
+          - Auto-inject JavaScript on any website
+          - 20+ ready-to-use templates
+          - AI-assisted script generation
+          - Hide elements without coding
+          - Telegram notifications
+          - Export/Import settings
+          
+          🔗 **Project:** https://github.com/ThuanD/Injector
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

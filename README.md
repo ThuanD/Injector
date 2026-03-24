@@ -32,10 +32,10 @@ Vì extension không có trên Chrome Web Store (Google thu phí $5 developer), 
 
 ### Bước 1 — Tải về
 
-Tải file ZIP từ nút **Code → Download ZIP** trên GitHub, hoặc clone:
+Tải file ZIP từ trang [Releases](https://github.com/ThuanD/Injector/releases), hoặc dùng link trực tiếp:
 
 ```bash
-git clone https://github.com/ThuanD/Injector.git
+curl -L https://github.com/ThuanD/Injector/releases/latest/download/Injector-Extension.zip -o Injector.zip
 ```
 
 ### Bước 2 — Giải nén
