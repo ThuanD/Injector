@@ -52,10 +52,10 @@ jobs:
           
           🚀 **Installation:**
           1. Download `Injector-Extension.zip`
-          2. Extract to `Injector-main/` folder
+          2. Extract to `Injector-Extension/` folder
           3. Open Chrome → `chrome://extensions`
           4. Enable Developer Mode
-          5. Click "Load unpacked" → Select `Injector-main/Injector-Extension/`
+          5. Click "Load unpacked" → Select `Injector-Extension/`
           
           ---
           
