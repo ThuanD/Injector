@@ -294,64 +294,168 @@ class BackgroundScriptManager {
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
-        world: "MAIN", // Execute directly in Main World to access genuine nonces
+        world: "MAIN",
         func: (scriptCode, scriptName) => {
-          try {
-            // 1. Wrap code for safety
-            const wrappedCode = `
-(function() {
-    try {
-        ${scriptCode}
-        console.log('[Injector] ✅ Script executed: ${scriptName}');
-    } catch (error) {
-        console.error('[Injector] Script execution error in "${scriptName}":', error);
-    }
-})();
-                        `;
+          const flagName =
+            "injector_run_" + Math.random().toString(36).substr(2, 9);
 
-            // 2. Create inline script element
-            const script = document.createElement("script");
-            script.textContent = wrappedCode;
-
-            // 3. AGGRESSIVE Nonce Stealing
-            // In Main World, we have access to the real nonces
-            let nonce = null;
-
-            // Try standard property first
-            const scriptWithNonce = document.querySelector("script[nonce]");
-            if (scriptWithNonce) {
-              nonce = scriptWithNonce.nonce;
-            }
-
-            // Fallback: iterate all scripts if querySelector fails/is blocked
-            if (!nonce) {
-              for (const s of document.scripts) {
-                if (s.nonce) {
-                  nonce = s.nonce;
-                  break;
+          const wrappedCode = `
+            window['${flagName}'] = true;
+            (function() {
+                try {
+                    ${scriptCode}
+                    console.log('[Injector] ✅ Script executed: ${scriptName}');
+                } catch (error) {
+                    console.error('[Injector] Script execution error in "${scriptName}":', error);
                 }
-              }
+            })();
+          `;
+
+          const getNonce = () => {
+            const script = document.querySelector("script[nonce]");
+            if (script) return script.nonce || script.getAttribute("nonce");
+            for (const s of document.scripts) {
+              if (s.nonce || s.getAttribute("nonce"))
+                return s.nonce || s.getAttribute("nonce");
             }
+            return null;
+          };
 
-            // Apply nonce if found
-            if (nonce) {
-              script.setAttribute("nonce", nonce);
-            }
+          const nonce = getNonce();
 
-            // 4. Inject
-            (document.head || document.documentElement).appendChild(script);
+          // ==========================================
+          // FALLBACK 1: INLINE SCRIPT
+          // ==========================================
+          try {
+            const s1 = document.createElement("script");
+            s1.textContent = wrappedCode;
+            if (nonce) s1.setAttribute("nonce", nonce);
+            (document.head || document.documentElement).appendChild(s1);
+            s1.remove();
+          } catch (e) {}
 
-            // 5. Cleanup
-            script.remove();
-          } catch (error) {
-            console.error("[Injector] Injection error:", error);
-            throw error;
+          if (window[flagName]) {
+            delete window[flagName];
+            return;
           }
+
+          // ==========================================
+          // FALLBACK 2: BLOB URL
+          // ==========================================
+          try {
+            const s2 = document.createElement("script");
+            const blob = new Blob([wrappedCode], { type: "text/javascript" });
+            const url = URL.createObjectURL(blob);
+            s2.src = url;
+            if (nonce) s2.setAttribute("nonce", nonce);
+
+            s2.onload = () => {
+              URL.revokeObjectURL(url);
+              s2.remove();
+              delete window[flagName];
+            };
+
+            s2.onerror = () => {
+              URL.revokeObjectURL(url);
+              s2.remove();
+
+              // ==========================================
+              // FALLBACK 3: SET_TIMEOUT (Eval)
+              // ==========================================
+              if (!window[flagName]) {
+                try {
+                  setTimeout(wrappedCode, 0);
+                } catch (err) {}
+              }
+            };
+            (document.head || document.documentElement).appendChild(s2);
+          } catch (e) {}
+
+          // ==========================================
+          // FALLBACK 4: GRACEFUL UI PROMPT (Chống CSP cứng)
+          // ==========================================
+          // Đợi 200ms để đảm bảo các cách trên đã báo lỗi xong
+          setTimeout(() => {
+            if (!window[flagName]) {
+              console.warn(
+                `[Injector] ❌ CSP chặn mọi cách inject tự động cho "${scriptName}". Chuyển sang Fallback 4 (UI Prompt).`,
+              );
+
+              const notifyId = "injector-csp-warning";
+              if (document.getElementById(notifyId)) return;
+
+              // Tạo UI thông báo bằng DOM API (Không bị CSP chặn)
+              const div = document.createElement("div");
+              div.id = notifyId;
+              div.style.cssText = `
+                position: fixed; top: 20px; right: 20px; width: 340px;
+                background: #1c2133; border: 1px solid #ff5a71; border-radius: 10px;
+                padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+                z-index: 2147483647; font-family: 'Segoe UI', Tahoma, sans-serif; 
+                color: #dce3f0;
+              `;
+
+              div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                  <strong style="color: #ff5a71; font-size: 14px; display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:16px;">🛡️</span> CSP Blocked Script
+                  </strong>
+                  <span id="inj-close" style="cursor:pointer; color:#9ba8c4; font-size:16px; font-weight:bold;">✕</span>
+                </div>
+                <div style="font-size: 12.5px; line-height: 1.5; color: #9ba8c4; margin-bottom: 14px;">
+                  Trang web này có bảo mật CSP cực kỳ khắt khe, trình duyệt chặn không cho extension tự động chạy code.<br><br>
+                  Để lấy Session, bạn cần chạy code thủ công qua Console.
+                </div>
+                <button id="inj-copy" style="width: 100%; padding: 10px; background: #ff5a71; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: background 0.2s;">
+                  ⎘ Copy Code & Mở F12
+                </button>
+              `;
+
+              document.body.appendChild(div);
+
+              // Xử lý nút tắt
+              document.getElementById("inj-close").onclick = () => div.remove();
+
+              const btn = document.getElementById("inj-copy");
+              btn.onmouseover = () => {
+                if (btn.style.background === "rgb(255, 90, 113)")
+                  btn.style.background = "#e04a5e";
+              };
+              btn.onmouseout = () => {
+                if (btn.style.background === "rgb(224, 74, 94)")
+                  btn.style.background = "#ff5a71";
+              };
+
+              // Xử lý nút copy (Dùng execCommand để vượt qua giới hạn HTTPS/Clipboard API)
+              btn.onclick = () => {
+                const tempText = document.createElement("textarea");
+                tempText.value = scriptCode;
+                document.body.appendChild(tempText);
+                tempText.select();
+                try {
+                  document.execCommand("copy");
+                  btn.textContent =
+                    "✓ Đã Copy! Hãy nhấn F12 -> Console -> Dán (Ctrl+V)";
+                  btn.style.background = "#2dd4a0";
+                  setTimeout(() => div.remove(), 5500);
+                } catch (err) {
+                  btn.textContent = "❌ Lỗi copy, hãy tự copy thủ công!";
+                }
+                tempText.remove();
+              };
+            } else {
+              delete window[flagName];
+            }
+          }, 200);
         },
         args: [code, scriptId],
       });
 
-      this.addLog(`Executed in MAIN: ${scriptId}`, "execute", "success");
+      this.addLog(
+        `Executed (or handled) in MAIN: ${scriptId}`,
+        "execute",
+        "success",
+      );
       sendResponse({ success: true });
     } catch (error) {
       this.addLog(`Failed: ${scriptId}`, "execute", "error");
