@@ -10,7 +10,7 @@ const SCRIPT_TEMPLATES = {
   removeAds: {
     name: "Remove Ads & Banners",
     description:
-      "Xóa quảng cáo, banner, popup phổ biến trên hầu hết các trang web.",
+      "Remove ads, banners, popups on most websites.",
     category: "🧹 DOM Cleanup",
     code: `(function removeAds() {
   const adSelectors = [
@@ -33,7 +33,7 @@ const SCRIPT_TEMPLATES = {
     });
   });
 
-  // Theo dõi và xóa ad được inject động
+  // Monitor and remove dynamically injected ads
   const observer = new MutationObserver(() => {
     adSelectors.forEach(sel => {
       document.querySelectorAll(sel).forEach(el => {
@@ -50,7 +50,7 @@ const SCRIPT_TEMPLATES = {
   blockNewWindows: {
     name: "Block New Windows & Tabs",
     description:
-      "Chặn tab quảng cáo dạng click-hijack phổ biến trên trang truyện tranh VN.",
+      "Block click-hijack ad tabs common on Vietnamese manga sites.",
     category: "🧹 DOM Cleanup",
     code: `(function blockNewWindows() {
   'use strict';
@@ -76,7 +76,7 @@ const SCRIPT_TEMPLATES = {
     window.open = blockOpen;
   }
 
-  // Backup: chặn cả self / top / parent
+  // Backup: also block self / top / parent
   ['self', 'top', 'parent'].forEach(obj => {
     try {
       if (window[obj]) {
@@ -85,7 +85,7 @@ const SCRIPT_TEMPLATES = {
     } catch {}
   });
 
-  // ── 2. Fix tất cả link target ──
+  // ── 2. Fix all link targets ──
   const fixLink = (a) => {
     if (!a || a.tagName !== 'A') return;
     if (a.target && a.target !== '_self') {
@@ -113,7 +113,7 @@ const SCRIPT_TEMPLATES = {
     subtree: true
   });
 
-  // ── 4. Chặn click hijack ──
+  // ── 4. Block click hijack ──
   const intercept = (e) => {
     const a = e.target?.closest?.('a');
 
@@ -128,7 +128,7 @@ const SCRIPT_TEMPLATES = {
   ['click', 'mousedown', 'pointerdown'].forEach(evt => {
     document.addEventListener(evt, intercept, {
       capture: true,
-      passive: false // ⚠️ quan trọng
+      passive: false // ⚠️ important
     });
   });
 
@@ -148,7 +148,7 @@ const SCRIPT_TEMPLATES = {
   removePaywall: {
     name: "Remove Paywall & Overlay",
     description:
-      "Xóa paywall, overlay đăng ký, popup chặn nội dung và khôi phục scroll.",
+      "Remove paywall, subscription overlay, content-blocking popup and restore scroll.",
     category: "🧹 DOM Cleanup",
     code: `(function removePaywall() {
   const overlaySelectors = [
@@ -165,7 +165,7 @@ const SCRIPT_TEMPLATES = {
     document.querySelectorAll(sel).forEach(el => el.remove());
   });
 
-  // Khôi phục scroll
+  // Restore scroll
   const restore = (el) => {
     el.style.overflow   = '';
     el.style.overflowY  = '';
@@ -175,11 +175,11 @@ const SCRIPT_TEMPLATES = {
   restore(document.body);
   restore(document.documentElement);
 
-  // Xóa class chặn scroll thường gặp
+  // Remove common scroll-blocking classes
   ['modal-open', 'overflow-hidden', 'noscroll', 'no-scroll', 'body-locked']
     .forEach(c => document.body.classList.remove(c));
 
-  // Khôi phục nội dung bị blur/mờ
+  // Restore blurred/obscured content
   document.querySelectorAll('[class*="blur"], [style*="blur"]').forEach(el => {
     el.style.filter = '';
     el.style.webkitFilter = '';
@@ -192,7 +192,7 @@ const SCRIPT_TEMPLATES = {
   removeStickyHeaders: {
     name: "Remove Sticky Headers & Floating Bars",
     description:
-      "Xóa các thanh header/footer dính (sticky/fixed) hay che nội dung khi scroll.",
+      "Remove sticky header/footer bars that obscure content when scrolling.",
     category: "🧹 DOM Cleanup",
     code: `(function removeStickyBars() {
   let removed = 0;
@@ -204,7 +204,7 @@ const SCRIPT_TEMPLATES = {
 
     if ((pos === 'fixed' || pos === 'sticky') && tag !== 'body' && tag !== 'html') {
       const rect = el.getBoundingClientRect();
-      // Chỉ xóa bar nằm ở trên cùng hoặc dưới cùng, không phải sidebar
+      // Only remove bars at top or bottom, not sidebars
       const isTopBar    = rect.top <= 10 && rect.width > window.innerWidth * 0.4;
       const isBottomBar = rect.bottom >= window.innerHeight - 10 && rect.width > window.innerWidth * 0.4;
 
@@ -215,7 +215,7 @@ const SCRIPT_TEMPLATES = {
     }
   });
 
-  // Thêm padding-top bị mất do xóa header
+  // Add padding-top lost from header removal
   document.body.style.paddingTop = '0';
   document.body.style.marginTop  = '0';
 
@@ -226,31 +226,31 @@ const SCRIPT_TEMPLATES = {
   cleanYouTube: {
     name: "Clean YouTube UI",
     description:
-      "Ẩn sidebar Shorts, gợi ý video phiền nhiễu, thanh end-screen, làm YouTube gọn gàng hơn.",
+      "Hide sidebar Shorts, annoying video suggestions, end-screen, make YouTube cleaner.",
     category: "🧹 DOM Cleanup",
     code: `(function cleanYouTube() {
   const css = \`
-    /* Ẩn Shorts trong sidebar */
+    /* Hide Shorts in sidebar */
     ytd-guide-entry-renderer a[href="/shorts"],
     ytd-mini-guide-entry-renderer a[href="/shorts"] { display: none !important; }
 
-    /* Ẩn section Shorts trên trang chủ */
+    /* Hide Shorts section on homepage */
     ytd-rich-section-renderer { display: none !important; }
 
-    /* Ẩn gợi ý cuối video (end screen) */
+    /* Hide end-screen suggestions */
     .ytp-endscreen-content { display: none !important; }
 
-    /* Ẩn cards (i button) */
+    /* Hide cards (i button) */
     .ytp-cards-teaser, .ytp-ce-element { display: none !important; }
 
-    /* Ẩn quảng cáo banner bên phải */
+    /* Hide right sidebar ads */
     #masthead-ad, ytd-banner-promo-renderer,
     ytd-statement-banner-renderer { display: none !important; }
 
-    /* Ẩn Promoted video trong search */
+    /* Hide Promoted videos in search */
     ytd-search-pyv-renderer { display: none !important; }
 
-    /* Thu hẹp sidebar để xem video rộng hơn */
+    /* Shrink sidebar for wider video view */
     ytd-watch-flexy[theater] #secondary { display: none !important; }
   \`;
 
@@ -283,10 +283,10 @@ const SCRIPT_TEMPLATES = {
   focusMode: {
     name: "Focus / Reading Mode",
     description:
-      "Chỉ hiển thị nội dung chính của bài viết, ẩn mọi thứ xung quanh. Giúp đọc tập trung hơn.",
+      "Show only main article content, hide everything around. Helps focused reading.",
     category: "⚡ Productivity",
     code: `(function focusMode() {
-  // Tìm vùng nội dung chính
+  // Find main content area
   const contentCandidates = [
     'article', 'main', '[role="main"]',
     '.post-content', '.article-content', '.entry-content',
@@ -304,7 +304,7 @@ const SCRIPT_TEMPLATES = {
   }
 
   if (!content) {
-    // Fallback: chọn element có text dài nhất
+    // Fallback: choose element with longest text
     let maxLen = 0;
     document.querySelectorAll('div, section').forEach(el => {
       if (el.innerText.length > maxLen) {
@@ -319,7 +319,7 @@ const SCRIPT_TEMPLATES = {
     return;
   }
 
-  // Clone và hiển thị nội dung trong overlay
+  // Clone and display content in overlay
   const clone = content.cloneNode(true);
   const overlay = document.createElement('div');
   overlay.id = 'injector-focus';
@@ -340,7 +340,7 @@ const SCRIPT_TEMPLATES = {
   \`;
   inner.appendChild(clone);
 
-  // Nút thoát
+  // Exit button
   const exitBtn = document.createElement('button');
   exitBtn.textContent = '✕ Exit Focus Mode';
   exitBtn.style.cssText = \`
@@ -356,7 +356,7 @@ const SCRIPT_TEMPLATES = {
   overlay.appendChild(exitBtn);
   document.body.appendChild(overlay);
 
-  // Thoát bằng ESC
+  // Exit with ESC
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') overlay.remove();
   }, { once: true });
@@ -366,10 +366,10 @@ const SCRIPT_TEMPLATES = {
   autoFillForms: {
     name: "Auto Fill Forms",
     description:
-      "Tự động điền thông tin cá nhân vào form. Chỉnh sửa biến config bên dưới trước khi dùng.",
+      "Automatically fill personal information into forms. Edit config variables below before using.",
     category: "⚡ Productivity",
     code: `(function autoFillForms() {
-  // ── Chỉnh thông tin của bạn ở đây ──
+  // ── Edit your information here ──
   const INFO = {
     firstName : 'Nguyen',
     lastName  : 'Van A',
@@ -384,7 +384,7 @@ const SCRIPT_TEMPLATES = {
     website   : 'https://example.com',
   };
 
-  // Map keyword → giá trị
+  // Map keyword → value
   const RULES = [
     { keys: ['firstname', 'first-name', 'first_name', 'fname'], value: INFO.firstName },
     { keys: ['lastname', 'last-name', 'last_name', 'lname'],    value: INFO.lastName },
@@ -425,7 +425,7 @@ const SCRIPT_TEMPLATES = {
   tableOfContents: {
     name: "Generate Table of Contents",
     description:
-      "Tự động tạo mục lục nổi từ các heading (h1–h3) của bài viết, có thể click để nhảy đến phần đó.",
+      "Automatically generate floating table of contents from article headings (h1–h3), clickable to jump to sections.",
     category: "⚡ Productivity",
     code: `(function generateTOC() {
   const headings = document.querySelectorAll('h1, h2, h3');
@@ -434,7 +434,7 @@ const SCRIPT_TEMPLATES = {
     return;
   }
 
-  // Gán id cho từng heading nếu chưa có
+  // Assign id to each heading if missing
   headings.forEach((h, i) => {
     if (!h.id) h.id = 'wc-section-' + i;
   });
@@ -481,10 +481,10 @@ const SCRIPT_TEMPLATES = {
   wordCounter: {
     name: "Word & Read Time Counter",
     description:
-      "Hiển thị số từ, số ký tự và thời gian đọc ước tính của bài viết ngay trên trang.",
+      "Display word count, character count and estimated reading time for articles right on the page.",
     category: "⚡ Productivity",
     code: `(function wordCounter() {
-  // Lấy nội dung văn bản chính
+  // Get main text content
   const contentEls = ['article', 'main', '.post-content', '.article-content', '.entry-content', '#content'];
   let text = '';
   for (const sel of contentEls) {
@@ -495,7 +495,7 @@ const SCRIPT_TEMPLATES = {
 
   const words   = text.trim().split(/\s+/).filter(w => w.length > 0).length;
   const chars   = text.replace(/\s/g, '').length;
-  const minutes = Math.ceil(words / 200); // tốc độ đọc trung bình 200 wpm
+  const minutes = Math.ceil(words / 200); // average reading speed 200 wpm
 
   const badge = document.createElement('div');
   badge.style.cssText = \`
@@ -535,7 +535,7 @@ const SCRIPT_TEMPLATES = {
   darkMode: {
     name: "Force Dark Mode",
     description:
-      "Bật dark mode cho bất kỳ trang nào bằng CSS filter invert. Ảnh và video được giữ nguyên màu.",
+      "Enable dark mode for any website using CSS filter invert. Images and videos keep original colors.",
     category: "🎨 Styling",
     code: `(function forceDarkMode() {
   const id = 'injector-darkmode';
@@ -557,7 +557,7 @@ const SCRIPT_TEMPLATES = {
     svg image {
       filter: invert(1) hue-rotate(180deg) !important;
     }
-    /* Giữ màu logo, icon thương hiệu */
+    /* Preserve logo, brand icon colors */
     [class*="logo"] img,
     [class*="avatar"] img,
     [class*="brand"] img { filter: none !important; }
@@ -576,16 +576,16 @@ const SCRIPT_TEMPLATES = {
   customFont: {
     name: "Change Page Font",
     description:
-      "Thay font chữ của toàn bộ trang sang font dễ đọc hơn. Có thể chỉnh trong config.",
+      "Change page font to a more readable one. Configurable in settings.",
     category: "🎨 Styling",
     code: `(function changeFont() {
-  // ── Chọn font theo ý thích ──
-  // Một số gợi ý: 'Georgia', 'Palatino', 'Tahoma', 'Verdana'
-  // Hoặc Google Fonts: 'Inter', 'Lora', 'Source Sans Pro', 'Merriweather'
+  // ── Choose font as you like ──
+  // Some suggestions: 'Georgia', 'Palatino', 'Tahoma', 'Verdana'
+  // Or Google Fonts: 'Inter', 'Lora', 'Source Sans Pro', 'Merriweather'
   const FONT_NAME    = 'Georgia';
   const FONT_SIZE    = '17px';
   const LINE_HEIGHT  = '1.8';
-  const USE_GOOGLE   = false; // Đặt true nếu muốn load từ Google Fonts
+  const USE_GOOGLE   = false; // Set true if you want to load from Google Fonts
   const GOOGLE_URL   = 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&display=swap';
 
   if (USE_GOOGLE) {
@@ -626,13 +626,13 @@ const SCRIPT_TEMPLATES = {
   zoomPage: {
     name: "Custom Page Zoom",
     description:
-      "Phóng to/thu nhỏ nội dung trang theo ý muốn mà không dùng Ctrl+/- của browser.",
+      "Zoom in/out page content as desired without using browser's Ctrl+/-.",
     category: "🎨 Styling",
     code: `(function customZoom() {
   const ZOOM_LEVEL = 1.15; // 1.0 = 100%, 1.15 = 115%, 0.9 = 90%
 
   document.body.style.zoom = ZOOM_LEVEL;
-  // Fallback cho Firefox
+  // Fallback for Firefox
   document.body.style.transform       = 'scale(' + ZOOM_LEVEL + ')';
   document.body.style.transformOrigin = 'top left';
   document.body.style.width           = (100 / ZOOM_LEVEL) + '%';
@@ -648,7 +648,7 @@ const SCRIPT_TEMPLATES = {
   highlightElements: {
     name: "Highlight & Inspect Elements",
     description:
-      "Di chuột lên element nào sẽ highlight và hiện thông tin tag, class, id. Nhấn ESC để tắt.",
+      "Mouse over any element to highlight and show tag, class, id info. Press ESC to disable.",
     category: "🔧 Developer Tools",
     code: `(function elementInspector() {
   const tooltip = document.createElement('div');
@@ -708,7 +708,7 @@ const SCRIPT_TEMPLATES = {
   showGridOverlay: {
     name: "CSS Grid Overlay",
     description:
-      "Hiển thị đường kẻ 8px grid để kiểm tra layout. Click lại vào bookmarklet để toggle.",
+      "Show 8px grid lines to check layout. Click bookmarklet again to toggle.",
     category: "🔧 Developer Tools",
     code: `(function gridOverlay() {
   const id = 'injector-grid';
@@ -717,7 +717,7 @@ const SCRIPT_TEMPLATES = {
 
   const GRID   = 8;   // px
   const COLOR  = 'rgba(61, 214, 245, 0.08)';
-  const ACCENT = 'rgba(61, 214, 245, 0.18)'; // mỗi 8 ô (64px)
+  const ACCENT = 'rgba(61, 214, 245, 0.18)'; // every 8 cells (64px)
 
   const style = document.createElement('style');
   style.id = id;
@@ -747,10 +747,10 @@ const SCRIPT_TEMPLATES = {
   localStorageViewer: {
     name: "LocalStorage / Cookie Viewer",
     description:
-      "Hiển thị toàn bộ dữ liệu localStorage và cookies của trang, dạng bảng dễ đọc.",
+      "Display all localStorage and cookies data in readable table format.",
     category: "🔧 Developer Tools",
     code: `(function storageViewer() {
-  // Thu thập data
+  // Collect data
   const ls = Object.entries(localStorage).map(([k, v]) => ({ key: k, value: v, source: 'localStorage' }));
   const ss = Object.entries(sessionStorage).map(([k, v]) => ({ key: k, value: v, source: 'sessionStorage' }));
   const ck = document.cookie.split(';').filter(Boolean).map(c => {
@@ -820,7 +820,7 @@ const SCRIPT_TEMPLATES = {
   pageInfo: {
     name: "Page SEO & Meta Info",
     description:
-      "Hiển thị đầy đủ thông tin SEO của trang: title, description, og tags, canonical, robots, heading structure.",
+      "Display complete SEO info: title, description, og tags, canonical, robots, heading structure.",
     category: "📊 Page Analytics",
     code: `(function pageSEOInfo() {
   const getMeta = (name) =>
@@ -882,7 +882,7 @@ const SCRIPT_TEMPLATES = {
   scrollDepthTracker: {
     name: "Scroll Depth Tracker",
     description:
-      "Theo dõi và hiển thị thanh tiến trình đọc bài viết ở đầu trang.",
+      "Track and display reading progress bar at top of article.",
     category: "📊 Page Analytics",
     code: `(function scrollDepthTracker() {
   const id = 'injector-progress';
@@ -927,16 +927,16 @@ const SCRIPT_TEMPLATES = {
   priceMonitor: {
     name: "Price Change Monitor",
     description:
-      "Theo dõi thay đổi giá sản phẩm trên trang, gửi thông báo Telegram khi giá thay đổi.",
+      "Monitor product price changes on page, send Telegram notification when price changes.",
     category: "🔔 Monitoring",
     code: `(function priceMonitor() {
   // ── Config ──
   const BOT_TOKEN  = 'YOUR_BOT_TOKEN';
   const CHAT_ID    = 'YOUR_CHAT_ID';
-  const CHECK_INTERVAL_MS = 30 * 1000; // 30 giây
+  const CHECK_INTERVAL_MS = 30 * 1000; // 30 seconds
   const STORAGE_KEY       = 'wc_price_' + location.hostname;
 
-  // ── Tìm giá tự động ──
+  // ── Auto-detect price ──
   const priceSelectors = [
     '[class*="price"]', '[class*="Price"]',
     '[class*="cost"]',  '[itemprop="price"]',
@@ -1002,14 +1002,14 @@ const SCRIPT_TEMPLATES = {
   textChangeMonitor: {
     name: "Text Content Change Monitor",
     description:
-      "Theo dõi sự thay đổi của một element cụ thể trên trang, gửi Telegram khi nội dung thay đổi.",
+      "Monitor specific element content changes on page, send Telegram when content changes.",
     category: "🔔 Monitoring",
     code: `(function textChangeMonitor() {
   // ── Config ──
   const BOT_TOKEN   = 'YOUR_BOT_TOKEN';
   const CHAT_ID     = 'YOUR_CHAT_ID';
-  const SELECTOR    = '.target-element'; // CSS selector của element cần theo dõi
-  const LABEL       = 'My Monitor';      // Tên để nhận dạng trong Telegram
+  const SELECTOR    = '.target-element'; // CSS selector of element to monitor
+  const LABEL       = 'My Monitor';      // Name to identify in Telegram
 
   const el = document.querySelector(SELECTOR);
   if (!el) {
@@ -1060,7 +1060,7 @@ const SCRIPT_TEMPLATES = {
   couponFinder: {
     name: "Coupon Code Finder",
     description:
-      "Tìm và hiển thị tất cả mã giảm giá (coupon code) được ẩn trong source code của trang.",
+      "Find and display all coupon codes hidden in page source code.",
     category: "🛒 E-Commerce",
     code: `(function couponFinder() {
   const couponPatterns = [
@@ -1084,7 +1084,7 @@ const SCRIPT_TEMPLATES = {
     }
   });
 
-  // Tìm thêm trong script tags
+  // Also search in script tags
   document.querySelectorAll('script').forEach(s => {
     const text = s.textContent;
     couponPatterns.forEach(pattern => {
@@ -1134,13 +1134,13 @@ const SCRIPT_TEMPLATES = {
   infiniteScrollLoader: {
     name: "Auto Infinite Scroll",
     description:
-      "Tự động cuộn trang để load thêm nội dung, hữu ích cho trang dùng infinite scroll.",
+      "Automatically scroll page to load more content, useful for infinite scroll pages.",
     category: "🖱 Automation",
     code: `(function autoScroll() {
-  const SCROLL_SPEED  = 3;     // px mỗi tick
+  const SCROLL_SPEED  = 3;     // px per tick
   const TICK_INTERVAL = 30;    // ms
-  const PAUSE_AT_BOTTOM = 2000; // ms dừng lại khi đến cuối để chờ load thêm
-  const MAX_SCROLLS   = 50;    // giới hạn số lần scroll đến cuối (0 = không giới hạn)
+  const PAUSE_AT_BOTTOM = 2000; // ms pause when reaching bottom to wait for more content
+  const MAX_SCROLLS   = 50;    // max number of scroll-to-bottom cycles (0 = unlimited)
 
   const id = 'injector-autoscroll';
   if (window[id]) {
@@ -1187,7 +1187,7 @@ const SCRIPT_TEMPLATES = {
   copyAllLinks: {
     name: "Copy All Links on Page",
     description:
-      "Thu thập và copy tất cả URL hợp lệ trên trang vào clipboard, mỗi link một dòng.",
+      "Collect and copy all valid URLs on page to clipboard, one link per line.",
     category: "🖱 Automation",
     code: `(function copyAllLinks() {
   const links = [...new Set(
@@ -1226,11 +1226,11 @@ const SCRIPT_TEMPLATES = {
   downloadAllImages: {
     name: "Download All Images",
     description:
-      "Tải về tất cả ảnh trên trang (chỉ ảnh có kích thước đáng kể, bỏ qua icon nhỏ).",
+      "Download all images on page (only significant size images, skip small icons).",
     category: "🖱 Automation",
     code: `(function downloadImages() {
-  const MIN_SIZE   = 100; // px — bỏ qua ảnh nhỏ hơn
-  const MAX_BATCH  = 20;  // tối đa bao nhiêu ảnh cùng lúc
+  const MIN_SIZE   = 100; // px — skip images smaller than this
+  const MAX_BATCH  = 20;  // max images at once
 
   const imgs = [...document.querySelectorAll('img')]
     .filter(img => {
@@ -1258,7 +1258,7 @@ const SCRIPT_TEMPLATES = {
       a.download = 'image-' + (i + 1) + '.' + ext;
       a.target   = '_blank';
       a.click();
-    }, i * 300); // delay để tránh browser block
+    }, i * 300); // delay to avoid browser blocking
   });
 
   console.log('[Injector] Downloading', toDownload.length, 'images...');
@@ -1272,27 +1272,27 @@ const SCRIPT_TEMPLATES = {
   twitterClean: {
     name: "Clean Twitter / X UI",
     description:
-      "Ẩn Trends, Who to Follow, gợi ý quảng cáo và các widget phiền nhiễu trên Twitter/X.",
+      "Hide Trends, Who to Follow, ad suggestions and annoying widgets on Twitter/X.",
     category: "💬 Social Media",
     code: `(function cleanTwitter() {
   const css = \`
-    /* Ẩn sidebar phải: Trends, Who to follow */
+    /* Hide right sidebar: Trends, Who to follow */
     [data-testid="sidebarColumn"] { display: none !important; }
 
-    /* Ẩn Promoted tweets */
+    /* Hide Promoted tweets */
     [data-testid="placementTracking"] { display: none !important; }
 
-    /* Ẩn "Who to follow" trong timeline */
+    /* Hide "Who to follow" in timeline */
     [data-testid="UserCell"] ~ div[class] { }
     aside[aria-label*="follow" i]        { display: none !important; }
 
-    /* Ẩn Topics to follow */
+    /* Hide Topics to follow */
     [data-testid="TopicsModule"]         { display: none !important; }
 
-    /* Ẩn Download app banner */
+    /* Hide Download app banner */
     [id="layers"] [href*="download"]     { display: none !important; }
 
-    /* Rộng nội dung hơn khi không có sidebar */
+    /* Wider content when no sidebar */
     [data-testid="primaryColumn"] { max-width: 700px !important; }
   \`;
 
@@ -1308,28 +1308,28 @@ const SCRIPT_TEMPLATES = {
   facebookClean: {
     name: "Clean Facebook Feed",
     description:
-      "Ẩn sidebar, Stories, Reels, gợi ý người dùng, quảng cáo khỏi news feed Facebook.",
+      "Hide sidebar, Stories, Reels, suggested users, ads from Facebook news feed.",
     category: "💬 Social Media",
     code: `(function cleanFacebook() {
   const css = \`
-    /* Ẩn cột phải (ads, birthday, events) */
+    /* Hide right column (ads, birthday, events) */
     [data-pagelet="RightRail"]  { display: none !important; }
 
-    /* Ẩn Stories bar */
+    /* Hide Stories bar */
     [data-pagelet="Stories"]    { display: none !important; }
     [aria-label="Stories"]      { display: none !important; }
 
-    /* Ẩn Reels */
+    /* Hide Reels */
     [data-pagelet*="Reels"]     { display: none !important; }
 
-    /* Ẩn Suggested for you / Sponsored */
+    /* Hide Suggested for you / Sponsored */
     [data-pagelet="FeedUnit_0"] [aria-label*="Suggested"],
     [aria-label="Sponsored"]    { display: none !important; }
 
-    /* Ẩn sidebar trái (bookmarks, groups list) */
+    /* Hide left sidebar (bookmarks, groups list) */
     [data-pagelet="LeftRail"]   { display: none !important; }
 
-    /* Mở rộng feed */
+    /* Expand feed */
     [data-pagelet="FeedUnit_0"] { max-width: 680px !important; margin: 0 auto !important; }
   \`;
 
@@ -1338,7 +1338,7 @@ const SCRIPT_TEMPLATES = {
   style.textContent = css;
   document.head.appendChild(style);
 
-  // Liên tục xóa dynamic sponsored posts
+  // Continuously remove dynamic sponsored posts
   const observer = new MutationObserver(() => {
     document.querySelectorAll('[aria-label="Sponsored"]')
       .forEach(el => el.closest('[data-pagelet]')?.remove());
@@ -1356,14 +1356,14 @@ const SCRIPT_TEMPLATES = {
   sessionExport: {
     name: "Session Exporter",
     description:
-      "Export cookie + localStorage của trang hiện tại thành một đoạn mã để chia sẻ với người khác (không cần chia sẻ mật khẩu).",
+      "Export cookies + localStorage of current page as code to share with others (no password sharing needed).",
     category: "🔑 Session Sharing",
     code: `(function sessionExport() {
   const domain = location.hostname;
 
-  // ── Thu thập Cookies ──
-  // Lưu ý: cookie có flag HttpOnly (do server set) sẽ KHÔNG đọc được bằng JS
-  // Đây là giới hạn của browser, không phải lỗi script
+  // ── Collect Cookies ──
+  // Note: cookies with HttpOnly flag (set by server) CANNOT be read by JS
+  // This is browser limitation, not script error
   const cookies = document.cookie
     .split(';')
     .map(c => c.trim())
@@ -1375,14 +1375,14 @@ const SCRIPT_TEMPLATES = {
       return obj;
     }, {});
 
-  // ── Thu thập localStorage ──
+  // ── Collect localStorage ──
   const ls = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     ls[key] = localStorage.getItem(key);
   }
 
-  // ── Thu thập sessionStorage ──
+  // ── Collect sessionStorage ──
   const ss = {};
   for (let i = 0; i < sessionStorage.length; i++) {
     const key = sessionStorage.key(i);
@@ -1394,14 +1394,14 @@ const SCRIPT_TEMPLATES = {
   const ssCount = Object.keys(ss).length;
 
   if (ckCount === 0 && lsCount === 0) {
-    alert('⚠️ Không tìm thấy dữ liệu session nào.\\n\\nRất có thể trang này dùng HttpOnly cookies — không thể export bằng JavaScript.');
+    alert('⚠️ No session data found.\n\nThis page likely uses HttpOnly cookies — cannot export via JavaScript.');
     return;
   }
 
   const payload = JSON.stringify({ domain, cookies, localStorage: ls, sessionStorage: ss }, null, 2);
   const encoded = btoa(unescape(encodeURIComponent(payload)));
 
-  // ── Hiển thị UI ──
+  // ── Show UI ──
   const panel = document.createElement('div');
   panel.style.cssText = \`
     position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
@@ -1420,10 +1420,10 @@ const SCRIPT_TEMPLATES = {
 
       <div style="background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);
         border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:#9ba8c4;line-height:1.6">
-        ⚠️ <strong style="color:#f5a623">Cảnh báo:</strong>
-        Đoạn mã này giúp người nhận đăng nhập với tư cách là bạn.
-        <strong style="color:#dce3f0">Chỉ gửi cho người bạn thực sự tin tưởng.</strong>
-        Session có thể hết hạn bất kỳ lúc nào.
+        ⚠️ <strong style="color:#f5a623">Warning:</strong>
+        This code lets the recipient log in as you.
+        <strong style="color:#dce3f0">Only send to people you truly trust.</strong>
+        Session can expire at any time.
       </div>
 
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -1442,7 +1442,7 @@ const SCRIPT_TEMPLATES = {
       </div>
 
       <div style="font-size:11px;font-weight:600;color:#5a6480;margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">
-        Session Code — gửi đoạn này cho người nhận
+        Session Code — send this to recipient
       </div>
       <textarea id="wc-ex-code" readonly style="width:100%;height:100px;background:#0c0e14;border:1px solid rgba(255,255,255,.1);
         border-radius:8px;padding:10px;color:#3dd6f5;font-family:'Courier New',monospace;font-size:11px;
@@ -1468,7 +1468,7 @@ const SCRIPT_TEMPLATES = {
 
   document.getElementById('wc-ex-copy').onclick = function() {
     navigator.clipboard.writeText(encoded).then(() => {
-      this.textContent = '✓ Đã copy!';
+      this.textContent = '✓ Copied!';
       setTimeout(() => { this.textContent = '⎘ Copy Session Code'; }, 2000);
     });
   };
@@ -1482,7 +1482,7 @@ const SCRIPT_TEMPLATES = {
     URL.revokeObjectURL(a.href);
   };
 
-  // Auto-select khi click vào textarea
+  // Auto-select when clicking textarea
   document.getElementById('wc-ex-code').onclick = function() { this.select(); };
 })();`,
   },
@@ -1490,12 +1490,12 @@ const SCRIPT_TEMPLATES = {
   sessionImport: {
     name: "Session Importer",
     description:
-      "Nhập session code được export từ Script Exporter để đăng nhập tài khoản mà không cần mật khẩu.",
+      "Import session code exported from Script Exporter to login to account without password.",
     category: "🔑 Session Sharing",
     code: `(function sessionImport() {
   const domain = location.hostname;
 
-  // ── Áp dụng session data ──
+  // ── Apply session data ──
   function applySession(payload) {
     let imported = { cookies: 0, localStorage: 0, sessionStorage: 0, skipped: 0 };
 
@@ -1516,11 +1516,11 @@ const SCRIPT_TEMPLATES = {
     }
 
     // Import cookies
-    // Lưu ý: HttpOnly/Secure/SameSite cookies cần server set — JS chỉ set được cookie thường
+    // Note: HttpOnly/Secure/SameSite cookies need server set — JS can only set regular cookies
     if (payload.cookies) {
       Object.entries(payload.cookies).forEach(([k, v]) => {
         try {
-          // Set với path=/ và max-age 7 ngày
+          // Set with path=/ and max-age 7 days
           document.cookie = \`\${k}=\${v}; path=/; max-age=604800; SameSite=Lax\`;
           imported.cookies++;
         } catch { imported.skipped++; }
@@ -1548,14 +1548,14 @@ const SCRIPT_TEMPLATES = {
 
       <div style="background:rgba(255,90,113,.06);border:1px solid rgba(255,90,113,.2);
         border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:#9ba8c4;line-height:1.6">
-        ⚠️ <strong style="color:#ff5a71">Chỉ import session code từ người bạn tin tưởng.</strong>
-        Import session từ nguồn lạ có thể khiến tài khoản của bạn bị kiểm soát.
+        ⚠️ <strong style="color:#ff5a71">Only import session code from people you trust.</strong>
+        Importing session from unknown sources can compromise your account.
       </div>
 
       <div style="font-size:11px;font-weight:600;color:#5a6480;margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">
-        Paste Session Code vào đây
+        Paste Session Code here
       </div>
-      <textarea id="wc-im-input" placeholder="Paste session code ở đây..." style="width:100%;height:100px;
+      <textarea id="wc-im-input" placeholder="Paste session code here..." style="width:100%;height:100px;
         background:#0c0e14;border:1px solid rgba(255,255,255,.1);border-radius:8px;
         padding:10px;color:#dce3f0;font-family:'Courier New',monospace;font-size:11px;
         resize:none;outline:none;line-height:1.5;margin-bottom:8px"></textarea>
@@ -1570,7 +1570,7 @@ const SCRIPT_TEMPLATES = {
       <div style="display:flex;gap:8px">
         <button id="wc-im-preview-btn" style="flex:1;padding:10px;background:#1c2133;
           border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#9ba8c4;font-size:13px;cursor:pointer">
-          🔍 Xem trước
+          🔍 Preview
         </button>
         <button id="wc-im-apply" disabled style="flex:2;padding:10px;background:rgba(124,108,248,.3);
           border:none;border-radius:8px;color:#9ba8c4;font-weight:700;font-size:13px;cursor:not-allowed;
@@ -1595,12 +1595,12 @@ const SCRIPT_TEMPLATES = {
       const decoded = decodeURIComponent(escape(atob(raw)));
       parsedPayload  = JSON.parse(decoded);
     } catch {
-      // Thử parse trực tiếp nếu là JSON thô (từ file download)
+      // Try parse directly if raw JSON (from downloaded file)
       try { parsedPayload = JSON.parse(raw); }
       catch {
         document.getElementById('wc-im-preview').style.display = 'block';
         document.getElementById('wc-im-preview').innerHTML =
-          '<span style="color:#ff5a71">❌ Session code không hợp lệ. Hãy kiểm tra lại.</span>';
+          '<span style="color:#ff5a71">❌ Invalid session code. Please check again.</span>';
         return;
       }
     }
@@ -1613,23 +1613,22 @@ const SCRIPT_TEMPLATES = {
     const preview = document.getElementById('wc-im-preview');
     preview.style.display = 'block';
     preview.innerHTML = \`
-      <div style="margin-bottom:8px;font-weight:600;color:#dce3f0">📋 Thông tin session:</div>
-      <div>🌐 Domain gốc: <strong style="color:#3dd6f5">\${srcDomain}</strong></div>
+      <div style="margin-bottom:8px;font-weight:600;color:#dce3f0">📋 Session info:</div>
+      <div>🌐 Source domain: <strong style="color:#3dd6f5">\${srcDomain}</strong></div>
       <div>🍪 Cookies: <strong style="color:#3dd6f5">\${ck}</strong></div>
       <div>💾 LocalStorage: <strong style="color:#7c6cf8">\${ls}</strong> keys</div>
       <div>📋 SessionStorage: <strong style="color:#2dd4a0">\${ss}</strong> keys</div>
     \`;
-
-    // Cảnh báo domain khác
+    // Domain mismatch warning
     const domainWarn = document.getElementById('wc-im-domain-warn');
     if (srcDomain !== domain) {
       domainWarn.style.display = 'block';
-      domainWarn.innerHTML = \`⚠️ Session này được export từ <strong>\${srcDomain}</strong> nhưng bạn đang ở <strong>\${domain}</strong>. Domain khác nhau — session có thể không hoạt động.\`;
+      domainWarn.innerHTML = '\\u26a0\\ufe0f This session was exported from <strong>' + srcDomain + '</strong> but you\\'re on <strong>' + domain + '</strong>. Different domains \\u2014 session may not work.';
     } else {
       domainWarn.style.display = 'none';
     }
 
-    // Unlock nút Import
+    // Unlock Import button
     const applyBtn = document.getElementById('wc-im-apply');
     applyBtn.disabled = false;
     applyBtn.style.background = 'linear-gradient(135deg,#7c6cf8,#3dd6f5)';
@@ -1642,7 +1641,7 @@ const SCRIPT_TEMPLATES = {
     const result = applySession(parsedPayload);
 
     const applyBtn = document.getElementById('wc-im-apply');
-    applyBtn.textContent = \`✓ Đã import \${result.cookies + result.localStorage + result.sessionStorage} items — Đang reload...\`;
+    applyBtn.textContent = 'â Imported ' + (result.cookies + result.localStorage + result.sessionStorage) + ' items â Reloading...';
     applyBtn.disabled = true;
 
     setTimeout(() => location.reload(), 1200);
@@ -1651,7 +1650,7 @@ const SCRIPT_TEMPLATES = {
   },
 };
 
-// Export cho Node.js / module environment
+// Export for Node.js / module environment
 if (typeof module !== "undefined" && module.exports) {
   module.exports = SCRIPT_TEMPLATES;
 }

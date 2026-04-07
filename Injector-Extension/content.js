@@ -42,8 +42,8 @@ class ScriptRunner {
     const currentUrl = window.location.href;
 
     Object.entries(this.scripts).forEach(([id, script]) => {
-      // Dùng script.pattern thay vì key
-      const pattern = script.pattern || id; // fallback cho script cũ (legacy)
+      // Use script.pattern instead of key
+      const pattern = script.pattern || id; // fallback for old scripts (legacy)
 
       if (
         script.enabled !== false &&
@@ -61,7 +61,7 @@ class ScriptRunner {
   scheduleExecution(scriptKey, code, pattern, name) {
     if (this.executedScripts.has(scriptKey)) return;
 
-    // Clear pending nếu có
+    // Clear pending if any
     if (this.pendingExecutions.has(scriptKey)) {
       clearTimeout(this.pendingExecutions.get(scriptKey));
       this.pendingExecutions.delete(scriptKey);
@@ -76,16 +76,16 @@ class ScriptRunner {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", execute, { once: true });
     } else {
-      // Nhỏ delay để đảm bảo dynamic content đã render
+      // Small delay to ensure dynamic content has rendered
       const timer = setTimeout(execute, 300);
       this.pendingExecutions.set(scriptKey, timer);
     }
   }
 
   /**
-   * Theo dõi SPA navigation (URL thay đổi mà không reload trang)
-   * Chỉ re-run scripts khi URL thực sự thay đổi — KHÔNG re-run khi DOM thay đổi
-   * do chính script gây ra (đây là nguyên nhân chạy 2 lần)
+   * Monitor SPA navigation (URL changes without page reload)
+   * Only re-run scripts when URL actually changes — DO NOT re-run when DOM changes
+   * caused by the script itself (this is the cause of double execution)
    */
   watchSPANavigation() {
     // Patch pushState / replaceState
@@ -108,12 +108,12 @@ class ScriptRunner {
     if (newUrl === this.lastUrl) return;
     this.lastUrl = newUrl;
 
-    // Clear executed set để scripts chạy lại ở trang mới
+    // Clear executed set to let scripts run again on new page
     this.executedScripts.clear();
     this.pendingExecutions.forEach((t) => clearTimeout(t));
     this.pendingExecutions.clear();
 
-    // Delay nhỏ để SPA render xong content
+    // Small delay for SPA to finish rendering content
     setTimeout(() => this.runScripts(), 500);
   }
 
@@ -205,12 +205,12 @@ class ScriptRunner {
 
 const scriptRunner = new ScriptRunner();
 
-// Reload scripts khi user thay đổi trong options page
+// Reload scripts when user changes in options page
 chrome.storage.local.onChanged.addListener((changes, namespace) => {
   if (namespace === "local") {
     if (changes.userScripts) {
       scriptRunner.scripts = changes.userScripts.newValue || {};
-      // Clear và re-run với scripts mới
+      // Clear and re-run with new scripts
       scriptRunner.executedScripts.clear();
       scriptRunner.pendingExecutions.forEach((t) => clearTimeout(t));
       scriptRunner.pendingExecutions.clear();

@@ -279,7 +279,7 @@ class OptionsManager {
         </div>
         <label class="confirm-row" id="secConfirmRow">
           <input type="checkbox" id="secConfirm">
-          <span class="confirm-row-label">Tôi hiểu rằng script này sẽ chạy trên trang web được chỉ định và <strong>tôi tin tưởng code này là an toàn</strong></span>
+          <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong></span>
         </label>
       </div>
       <div class="modal-actions">
@@ -333,7 +333,7 @@ class OptionsManager {
         </div>
         <label class="confirm-row" id="secConfirmRow">
           <input type="checkbox" id="secConfirm" checked>
-          <span class="confirm-row-label">Tôi hiểu rằng script này sẽ chạy trên trang web được chỉ định và <strong>tôi tin tưởng code này là an toàn</strong> <span style="color:var(--success);font-size:11px">(template đã được kiểm duyệt ✓)</span></span>
+          <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong> <span style="color:var(--success);font-size:11px">(template has been reviewed ✓)</span></span>
         </label>
       </div>
       <div class="modal-actions">
@@ -516,8 +516,8 @@ class OptionsManager {
         <div style="grid-column:1/-1">
           <div class="empty-state">
             <div class="empty-icon">🔍</div>
-            <div class="empty-title">Không tìm thấy</div>
-            <div class="empty-desc">Thử từ khoá khác hoặc chọn danh mục khác.</div>
+            <div class="empty-title">Not found</div>
+            <div class="empty-desc">Try different keywords or select another category.</div>
           </div>
         </div>`;
       return;
@@ -653,10 +653,10 @@ class OptionsManager {
   setupGuide() {
     const PROMPTS = [
       {
-        label: 'Ẩn phần tử',
-        title: 'Ẩn quảng cáo / phần tử không cần',
-        preview: 'Write a JS script to hide [mô tả phần tử] on [tên trang]...',
-        prompt: `Write a JavaScript script to automatically hide [MÔ TẢ PHẦN TỬ - ví dụ: the floating chat button, the sidebar ads, the cookie banner] on [TÊN TRANG WEB].
+        label: 'Hide elements',
+        title: 'Hide ads / unwanted elements',
+        preview: 'Write a JS script to hide [element description] on [site name]...',
+        prompt: `Write a JavaScript script to automatically hide [ELEMENT DESCRIPTION - example: the floating chat button, the sidebar ads, the cookie banner] on [WEBSITE NAME].
 
 Requirements:
 - Wrapped in an IIFE: (function() { ... })();
@@ -666,23 +666,23 @@ Requirements:
 - Put configurable selectors as constants at the top with comments`,
       },
       {
-        label: 'Tự động hóa',
-        title: 'Tự động click / điền form',
-        preview: 'Write a JS script to automatically [click/fill] on [trang]...',
-        prompt: `Write a JavaScript script to automatically [MÔ TẢ HÀNH ĐỘNG - ví dụ: click the "Accept cookies" button, fill in the login form with my credentials, skip the intro animation] on [TÊN TRANG WEB].
+        label: 'Automation',
+        title: 'Automate tasks',
+        preview: 'Write a JS script to automate [action] on [site]...',
+        prompt: `Write a JavaScript script to automatically [ACTION DESCRIPTION - example: click the "Accept cookies" button, fill in the login form with my credentials, skip the intro animation] on [WEBSITE NAME].
 
 Requirements:
 - Wrapped in an IIFE: (function() { ... })();
 - Vanilla JS only, no external libraries
 - Handle the case where the element might not exist yet (use setTimeout or MutationObserver)
 - Add console.log('[Injector] Done') at the end
-- Put any configurable values (selectors, credentials, timing) as constants at the top`,
+- Put configurable selectors as constants at the top with comments`,
       },
       {
-        label: 'Theo dõi / Alert',
-        title: 'Thông báo khi có thay đổi',
-        preview: 'Write a JS script to monitor [nội dung] and alert when changed...',
-        prompt: `Write a JavaScript script to monitor [MÔ TẢ NỘI DUNG CẦN THEO DÕI - ví dụ: the price of the product, the stock status, a specific text element] on [TÊN TRANG WEB] and show a browser notification or console alert when it changes.
+        label: 'Monitor / Alert',
+        title: 'Alert when something changes',
+        preview: 'Write a JS script to monitor [content] and alert when changed...',
+        prompt: `Write a JavaScript script to monitor [CONTENT TO MONITOR - example: the price of the product, the stock status, a specific text element] on [WEBSITE NAME] and show a browser notification or console alert when it changes.
 
 Requirements:
 - Wrapped in an IIFE: (function() { ... })();
@@ -693,10 +693,10 @@ Requirements:
 - Put config variables (selector, interval, storage key) at the top as constants`,
       },
       {
-        label: 'Giao diện',
-        title: 'Thay đổi giao diện trang',
-        preview: 'Write a JS script to change the styling/layout of [trang]...',
-        prompt: `Write a JavaScript script to [MÔ TẢ THAY ĐỔI GIAO DIỆN - ví dụ: make the font larger and more readable, change the background to dark mode, hide the left sidebar and make the content area wider, increase line spacing] on [TÊN TRANG WEB].
+        label: 'Style changes',
+        title: 'Change page appearance',
+        preview: 'Write a JS script to [style change] on [site]...',
+        prompt: `Write a JavaScript script to [STYLE CHANGE DESCRIPTION - example: make the font larger and more readable, change the background to dark mode, hide the left sidebar and make the content area wider, increase line spacing] on [WEBSITE NAME].
 
 Requirements:
 - Wrapped in an IIFE: (function() { ... })();
@@ -706,10 +706,10 @@ Requirements:
 - Add console.log('[Injector] Style applied/removed') at the end`,
       },
       {
-        label: 'Thu thập dữ liệu',
-        title: 'Lấy / copy dữ liệu từ trang',
-        preview: 'Write a JS script to collect [dữ liệu] from [trang] and copy...',
-        prompt: `Write a JavaScript script to collect [MÔ TẢ DỮ LIỆU - ví dụ: all product names and prices, all article titles and links, all table data] from [TÊN TRANG WEB] and copy them to the clipboard as plain text (one item per line) or as CSV.
+        label: 'Collect data',
+        title: 'Get / copy data from page',
+        preview: 'Write a JS script to collect [data] from [page] and copy...',
+        prompt: `Write a JavaScript script to collect [DATA DESCRIPTION - example: all product names and prices, all article titles and links, all table data] from [WEBSITE NAME] and copy them to the clipboard as plain text (one item per line) or as CSV.
 
 Requirements:
 - Wrapped in an IIFE: (function() { ... })();
@@ -719,9 +719,9 @@ Requirements:
 - Put configurable selectors as constants at the top`,
       },
       {
-        label: 'Tổng quát',
-        title: 'Mô tả tự do bằng tiếng Việt',
-        preview: 'Dùng khi bạn chỉ biết mình muốn gì, không biết dùng prompt nào...',
+        label: 'General',
+        title: 'Free description in Vietnamese',
+        preview: 'Use when you know what you want but don\'t know which prompt to use...',
         prompt: `Tôi muốn tạo một script JavaScript chạy tự động trên trang [TÊN TRANG WEB].
 
 Mục tiêu: [MÔ TẢ ĐIỀU BẠN MUỐN SCRIPT LÀM - càng chi tiết càng tốt, viết tiếng Việt cũng được]
@@ -747,7 +747,7 @@ Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài 
         <div class="prompt-card-preview">${this.esc(p.preview)}</div>
         <div class="prompt-card-footer">
           <button class="copy-prompt-btn" data-idx="${i}">⎘ Copy Prompt</button>
-          <a class="open-ai-btn" href="https://chatgpt.com" target="_blank">↗ Mở ChatGPT</a>
+          <a class="open-ai-btn" href="https://chatgpt.com" target="_blank">↗ Open ChatGPT</a>
         </div>
       </div>
     `).join('');
@@ -757,7 +757,7 @@ Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài 
         const idx = parseInt(btn.dataset.idx);
         navigator.clipboard.writeText(PROMPTS[idx].prompt).then(() => {
           const orig = btn.textContent;
-          btn.textContent = '✓ Đã copy!';
+          btn.textContent = '✓ Copied!';
           btn.style.background = 'rgba(45,212,160,.15)';
           btn.style.borderColor = 'rgba(45,212,160,.3)';
           btn.style.color = 'var(--success)';
@@ -767,7 +767,7 @@ Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài 
             btn.style.borderColor = '';
             btn.style.color = '';
           }, 2000);
-          this.toast('Prompt copied! Paste vào ChatGPT ✓', 'success');
+          this.toast('Prompt copied! Paste into ChatGPT ✓', 'success');
         });
       });
     });
@@ -818,7 +818,7 @@ Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài 
 const optionsManager = new OptionsManager();
 window._om = optionsManager;
 
-// Auto-refresh khi storage thay đổi từ bất kỳ nguồn nào (popup, content script...)
+// Auto-refresh when storage changes from any source (popup, content script...)
 chrome.storage.local.onChanged.addListener((changes) => {
   if (changes.userScripts) {
     optionsManager.scripts  = changes.userScripts.newValue || {};

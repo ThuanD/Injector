@@ -304,7 +304,7 @@ class BackgroundScriptManager {
             (function() {
                 try {
                     ${scriptCode}
-                    console.log('[Injector] ✅ Script executed: ${scriptName}');
+                    console.log('[Injector] Script executed: ${scriptName}');
                 } catch (error) {
                     console.error('[Injector] Script execution error in "${scriptName}":', error);
                 }
@@ -378,7 +378,7 @@ class BackgroundScriptManager {
           setTimeout(() => {
             if (!window[flagName]) {
               console.warn(
-                `[Injector] ❌ CSP chặn mọi cách inject tự động cho "${scriptName}". Chuyển sang Fallback 4 (UI Prompt).`,
+                `[Injector] CSP blocks all automatic injection methods for "${scriptName}". Switching to Fallback 4 (UI Prompt).`,
               );
 
               const notifyId = "injector-csp-warning";
@@ -403,11 +403,11 @@ class BackgroundScriptManager {
                   <span id="inj-close" style="cursor:pointer; color:#9ba8c4; font-size:16px; font-weight:bold;">✕</span>
                 </div>
                 <div style="font-size: 12.5px; line-height: 1.5; color: #9ba8c4; margin-bottom: 14px;">
-                  Trang web này có bảo mật CSP cực kỳ khắt khe, trình duyệt chặn không cho extension tự động chạy code.<br><br>
-                  Để lấy Session, bạn cần chạy code thủ công qua Console.
+                  This website has very strict CSP, the browser blocks the extension from automatically running code.<br><br>
+                  To get the Session, you need to run the code manually through the Console.
                 </div>
                 <button id="inj-copy" style="width: 100%; padding: 10px; background: #ff5a71; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: background 0.2s;">
-                  ⎘ Copy Code & Mở F12
+                  ⎘ Copy Code & Open F12
                 </button>
               `;
 
@@ -435,11 +435,11 @@ class BackgroundScriptManager {
                 try {
                   document.execCommand("copy");
                   btn.textContent =
-                    "✓ Đã Copy! Hãy nhấn F12 -> Console -> Dán (Ctrl+V)";
+                    "✓ Copied! Please press F12 -> Console -> Paste (Ctrl+V)";
                   btn.style.background = "#2dd4a0";
                   setTimeout(() => div.remove(), 5500);
                 } catch (err) {
-                  btn.textContent = "❌ Lỗi copy, hãy tự copy thủ công!";
+                  btn.textContent = "❌ Copy error, please copy manually!";
                 }
                 tempText.remove();
               };
@@ -532,8 +532,26 @@ class BackgroundScriptManager {
 
   /**
    * Send Telegram notification via Bot API
+   * 
+   * WHY THIS FUNCTION EXISTS IN BACKGROUND SCRIPT:
+   * ==========================================
+   * Content scripts (where templates run) are restricted by CSP (Content Security Policy):
+   * 1. External API calls like fetch('https://api.telegram.org/...') are blocked on many websites
+   * 2. CORS restrictions prevent cross-origin requests from content scripts
+   * 3. HTTPS pages cannot call HTTP APIs due to mixed content policies
+   * 
+   * ARCHITECTURE FLOW:
+   * Template (content script) -> dispatchEvent -> Content script listener -> 
+   * chrome.runtime.sendMessage() -> Background script -> fetch(api.telegram.org)
+   * 
+   * BACKGROUND SCRIPT ADVANTAGES:
+   * - No CSP restrictions for external API calls
+   * - Full permissions from manifest.json
+   * - Centralized logging and error handling
+   * - Secure: Bot tokens never exposed in content script context
+   * 
    * @param {string} botToken - Telegram bot token
-   * @param {string} chatId - Telegram chat ID
+   * @param {string} chatId - Telegram chat ID  
    * @param {string} message - Message to send
    * @param {Function} sendResponse - Response callback
    */
