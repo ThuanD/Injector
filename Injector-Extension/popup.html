@@ -315,8 +315,11 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+
+      /* TOGGLE */
       .toggle-wrap {
-        flex-shrink: 0;
+        display: flex;
+        align-items: center;
       }
       .toggle {
         appearance: none;
@@ -324,9 +327,10 @@
         height: 18px;
         background: var(--muted);
         border-radius: 9px;
-        position: relative;
         cursor: pointer;
+        position: relative;
         transition: background 0.25s;
+        flex-shrink: 0;
       }
       .toggle::after {
         content: "";
@@ -478,6 +482,244 @@
         font-size: 10px;
       }
 
+      /* ── AUTO-SCROLL PANEL ── */
+      .autoscroll-panel {
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      /* big start/stop button */
+      .as-toggle-btn {
+        width: 100%;
+        padding: 11px;
+        border-radius: 9px;
+        border: 1.5px solid var(--border);
+        background: var(--card);
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--text);
+        font-family: "DM Sans", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.22s;
+        position: relative;
+        overflow: hidden;
+      }
+      .as-toggle-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        opacity: 0;
+        transition: opacity 0.22s;
+      }
+      .as-toggle-btn span {
+        position: relative;
+        z-index: 1;
+      }
+      .as-toggle-btn:hover::before,
+      .as-toggle-btn.running::before {
+        opacity: 1;
+      }
+      .as-toggle-btn.running {
+        border-color: transparent;
+        color: var(--bg);
+      }
+      .as-toggle-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .as-toggle-btn.running:hover {
+        color: var(--bg);
+        opacity: 0.9;
+      }
+
+      /* scroll indicator bar */
+      .as-progress-wrap {
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .as-progress-wrap.visible {
+        opacity: 1;
+      }
+      .as-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        border-radius: 2px;
+        transition: width 0.4s linear;
+      }
+
+      /* controls grid */
+      .as-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .as-control-box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        transition: border-color 0.2s;
+      }
+      .as-control-box:hover {
+        border-color: rgba(61, 214, 245, 0.2);
+      }
+
+      .as-control-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .as-control-value {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .as-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      .as-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(61, 214, 245, 0.5);
+        transition: box-shadow 0.2s;
+      }
+      .as-slider::-webkit-slider-thumb:hover {
+        box-shadow: 0 0 10px rgba(61, 214, 245, 0.8);
+      }
+
+      /* direction row */
+      .as-dir-row {
+        display: flex;
+        gap: 5px;
+      }
+      .as-dir-btn {
+        flex: 1;
+        padding: 6px 4px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-family: "DM Sans", sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      .as-dir-btn.active {
+        border-color: var(--accent2);
+        color: var(--accent2);
+        background: rgba(124, 108, 248, 0.1);
+      }
+      .as-dir-btn:hover:not(.active) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* mode selector */
+      .as-mode-row {
+        display: flex;
+        gap: 5px;
+      }
+      .as-mode-btn {
+        flex: 1;
+        padding: 6px 4px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-family: "DM Sans", sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s;
+        text-align: center;
+      }
+      .as-mode-btn.active {
+        border-color: var(--warn);
+        color: var(--warn);
+        background: rgba(245, 166, 35, 0.1);
+      }
+      .as-mode-btn:hover:not(.active) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* status row */
+      .as-status-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 10px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .as-status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+        transition: background 0.3s, box-shadow 0.3s;
+      }
+      .as-status-dot.active {
+        background: var(--success);
+        box-shadow: 0 0 6px var(--success);
+        animation: pulse 1.5s infinite;
+      }
+      .as-status-text {
+        flex: 1;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px;
+      }
+      .as-status-text strong {
+        color: var(--text);
+      }
+
       /* BOTTOM BAR */
       .bottom-bar {
         padding: 10px 14px;
@@ -582,6 +824,7 @@
         <span class="tab-badge" id="tabCount">0</span>
       </button>
       <button class="tab" data-tab="hide"><span>🚫</span> Hide</button>
+      <button class="tab" data-tab="autoscroll"><span>🔄</span> Scroll</button>
     </div>
 
     <!-- Scripts Panel -->
@@ -606,24 +849,79 @@
           </label>
         </div>
 
-        <div
-          class="hint-text"
-          style="font-size: 11px; color: var(--muted); margin-bottom: 7px"
-        >
+        <div class="hint-text" style="font-size: 11px; color: var(--muted); margin-bottom: 7px">
           CSS selectors, comma-separated:
         </div>
         <div class="textarea-wrap">
-          <textarea
-            class="hide-textarea"
-            id="hideInput"
-            placeholder=".ad-banner, #popup, [data-ad]"
-          ></textarea>
+          <textarea class="hide-textarea" id="hideInput" placeholder=".ad-banner, #popup, [data-ad]"></textarea>
         </div>
         <div class="hide-hint">
           Supports: <code>.class</code> · <code>#id</code> ·
           <code>[attr]</code> · <code>tag</code><br />
           Example: <code>.sidebar-ads, #cookie-banner, .promo</code>
         </div>
+      </div>
+    </div>
+
+    <!-- AutoScroll Panel -->
+    <div class="panel" id="panel-autoscroll">
+      <div class="autoscroll-panel">
+
+        <!-- progress bar -->
+        <div class="as-progress-wrap" id="asProgressWrap">
+          <div class="as-progress-bar" id="asProgressBar"></div>
+        </div>
+
+        <!-- start / stop -->
+        <button class="as-toggle-btn" id="asToggleBtn">
+          <span id="asToggleIcon">▶</span>
+          <span id="asToggleLabel">Start Auto-Scroll</span>
+        </button>
+
+        <!-- status -->
+        <div class="as-status-row">
+          <div class="as-status-dot" id="asStatusDot"></div>
+          <div class="as-status-text" id="asStatusText">Idle — press Start to begin</div>
+        </div>
+
+        <!-- speed & step controls -->
+        <div class="as-controls">
+          <!-- Speed -->
+          <div class="as-control-box">
+            <div class="as-control-label">⚡ Speed (px/s)</div>
+            <div class="as-control-value" id="asSpeedVal">120</div>
+            <input type="range" class="as-slider" id="asSpeed"
+              min="10" max="800" step="10" value="120" />
+          </div>
+
+          <!-- Step size (for step mode) -->
+          <div class="as-control-box">
+            <div class="as-control-label">📐 Step (px)</div>
+            <div class="as-control-value" id="asStepVal">200</div>
+            <input type="range" class="as-slider" id="asStep"
+              min="50" max="1000" step="50" value="200" />
+          </div>
+        </div>
+
+        <!-- direction -->
+        <div class="as-control-box" style="gap:8px">
+          <div class="as-control-label">↕ Direction</div>
+          <div class="as-dir-row">
+            <button class="as-dir-btn active" data-dir="down">▼ Down</button>
+            <button class="as-dir-btn" data-dir="up">▲ Up</button>
+          </div>
+        </div>
+
+        <!-- scroll mode -->
+        <div class="as-control-box" style="gap:8px">
+          <div class="as-control-label">🔁 Mode</div>
+          <div class="as-mode-row">
+            <button class="as-mode-btn active" data-mode="smooth">Smooth</button>
+            <button class="as-mode-btn" data-mode="step">Step</button>
+            <button class="as-mode-btn" data-mode="loop">Loop</button>
+          </div>
+        </div>
+
       </div>
     </div>
 

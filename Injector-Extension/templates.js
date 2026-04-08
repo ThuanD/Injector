@@ -1134,53 +1134,161 @@ const SCRIPT_TEMPLATES = {
   infiniteScrollLoader: {
     name: "Auto Infinite Scroll",
     description:
-      "Automatically scroll page to load more content, useful for infinite scroll pages.",
+      "Automatically scroll page to load more content, perfect for reading manga/novels.",
     category: "🖱 Automation",
     code: `(function autoScroll() {
-  const SCROLL_SPEED  = 3;     // px per tick
-  const TICK_INTERVAL = 30;    // ms
-  const PAUSE_AT_BOTTOM = 2000; // ms pause when reaching bottom to wait for more content
-  const MAX_SCROLLS   = 50;    // max number of scroll-to-bottom cycles (0 = unlimited)
+  // ===== CONFIGURATION =====
+  const SCROLL_SPEED  = 5;     // px per tick (1-10 recommended)
+  const TICK_INTERVAL = 40;    // ms (20-100 for smoothness)
+  const PAUSE_AT_BOTTOM = 1500; // ms pause when reaching bottom
+  const MAX_SCROLLS   = 100;   // max scroll cycles (0 = unlimited)
+  
+  // Reading mode optimizations
+  const READING_MODE = true;    // optimized for reading content
+  const SMART_PAUSE = true;     // pause longer at bottom for content loading
+  const SHOW_CONTROLS = true;   // show floating controls
 
   const id = 'injector-autoscroll';
+  
+  // ===== CLEANUP EXISTING INSTANCE =====
   if (window[id]) {
     clearInterval(window[id]);
     window[id] = null;
+    // Remove existing UI elements
+    const existingUI = document.getElementById('injector-autoscroll-ui');
+    if (existingUI) existingUI.remove();
     console.log('[AutoScroll] Stopped');
     return;
   }
 
+  // ===== STATE MANAGEMENT =====
   let bottomCount = 0;
-  let waiting     = false;
+  let waiting = false;
+  let isActive = true;
 
+  // ===== UI CONTROLS =====
+  function createControls() {
+    if (!SHOW_CONTROLS) return;
+    
+    const controls = document.createElement('div');
+    controls.id = 'injector-autoscroll-ui';
+    controls.style.cssText = \`
+      position: fixed; top: 20px; right: 20px; z-index: 999999;
+      background: #1a1a1a; border: 1px solid #3dd6f5; border-radius: 8px;
+      padding: 12px; color: white; font-family: system-ui; font-size: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3); min-width: 180px;
+    \`;
+    
+    controls.innerHTML = \`
+      <div style="margin-bottom: 8px; font-weight: 600; color: #3dd6f5;">📜 Auto Scroll</div>
+      <div>Speed: <span id="as-speed">\${SCROLL_SPEED}</span> px/tick</div>
+      <div>Scrolls: <span id="as-count">0</span> / \${MAX_SCROLLS || '∞'}</div>
+      <div style="margin-top: 8px; font-size: 11px; color: #888;">
+        ↑↓ Speed | ESC Stop | R Reset
+      </div>
+    \`;
+    
+    document.body.appendChild(controls);
+    return controls;
+  }
+
+  const ui = createControls();
+
+  // ===== UPDATE UI =====
+  function updateUI() {
+    if (!ui) return;
+    const speedEl = document.getElementById('as-speed');
+    const countEl = document.getElementById('as-count');
+    if (speedEl) speedEl.textContent = SCROLL_SPEED;
+    if (countEl) countEl.textContent = bottomCount;
+  }
+
+  // ===== MAIN SCROLL LOGIC =====
   window[id] = setInterval(() => {
-    if (waiting) return;
+    if (!isActive || waiting) return;
 
     window.scrollBy(0, SCROLL_SPEED);
 
-    const isBottom = (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 50;
+    // Check if reached bottom with better detection
+    const scrollPosition = window.innerHeight + window.scrollY;
+    const documentHeight = document.documentElement.scrollHeight;
+    const threshold = READING_MODE ? 100 : 50;
+    const isBottom = scrollPosition >= documentHeight - threshold;
+
     if (isBottom) {
       bottomCount++;
+      updateUI();
+      
+      // Check scroll limit
       if (MAX_SCROLLS > 0 && bottomCount >= MAX_SCROLLS) {
         clearInterval(window[id]);
         window[id] = null;
+        isActive = false;
         console.log('[AutoScroll] Reached max scroll limit:', MAX_SCROLLS);
+        if (ui) {
+          ui.style.borderColor = '#ff5a71';
+          ui.innerHTML += '<div style="margin-top:8px;color:#ff5a71;">✋ Limit reached</div>';
+        }
         return;
       }
+
+      // Smart pause logic
       waiting = true;
-      setTimeout(() => { waiting = false; }, PAUSE_AT_BOTTOM);
-      console.log('[AutoScroll] Bottom reached, waiting for more content... (' + bottomCount + ')');
+      const multiplier = SMART_PAUSE && bottomCount % 3 === 0 ? 2 : 1;
+      const pauseDuration = PAUSE_AT_BOTTOM * multiplier;
+      
+      setTimeout(() => { 
+        waiting = false; 
+      }, pauseDuration);
+      
+      console.log('[AutoScroll] Bottom reached, waiting ' + (pauseDuration/1000) + 's... (scroll #' + bottomCount + ')');
+      
+      // Visual feedback
+      if (READING_MODE && document.body) {
+        document.body.style.borderTop = '3px solid #3dd6f5';
+        setTimeout(() => { document.body.style.borderTop = ''; }, pauseDuration / 2);
+      }
     }
   }, TICK_INTERVAL);
 
-  console.log('[AutoScroll] Started — run again to STOP');
-  document.addEventListener('keydown', e => {
+  // ===== KEYBOARD CONTROLS =====
+  function handleKeydown(e) {
     if (e.key === 'Escape') {
       clearInterval(window[id]);
       window[id] = null;
-      console.log('[AutoScroll] Stopped by ESC');
+      isActive = false;
+      console.log('[AutoScroll] Stopped by user');
+      if (ui) ui.remove();
+    } else if (e.key === 'ArrowUp') {
+      SCROLL_SPEED = Math.max(1, SCROLL_SPEED - 1);
+      updateUI();
+      console.log('[AutoScroll] Speed:', SCROLL_SPEED + 'px/tick');
+    } else if (e.key === 'ArrowDown') {
+      SCROLL_SPEED = Math.min(10, SCROLL_SPEED + 1);
+      updateUI();
+      console.log('[AutoScroll] Speed:', SCROLL_SPEED + 'px/tick');
+    } else if (e.key.toLowerCase() === 'r') {
+      bottomCount = 0;
+      updateUI();
+      console.log('[AutoScroll] Reset scroll count');
     }
-  }, { once: true });
+  }
+
+  document.addEventListener('keydown', handleKeydown, { once: false });
+
+  // ===== INITIALIZATION =====
+  updateUI();
+  console.log('[AutoScroll] Started for reading — ESC: stop, ↑↓: speed, R: reset');
+  
+  // ===== CLEANUP ON PAGE UNLOAD =====
+  window.addEventListener('beforeunload', () => {
+    if (window[id]) {
+      clearInterval(window[id]);
+      window[id] = null;
+    }
+    if (ui) ui.remove();
+    document.removeEventListener('keydown', handleKeydown);
+  });
 })();`,
   },
 

@@ -30,16 +30,27 @@ class PopupManager {
     document
       .querySelectorAll(".panel")
       .forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
-    const saveBtn = document.getElementById("saveHideBtn");
-    const addBtn = document.getElementById("addBtn");
+
+    const saveBtn  = document.getElementById("saveHideBtn");
+    const addBtn   = document.getElementById("addBtn");
     const manageBtn = document.getElementById("manageBtn");
+
     if (name === "hide") {
+      // Hide tab: only show saveHideBtn
       saveBtn.style.display = "flex";
       addBtn.style.display = "none";
-      manageBtn.style.flex = "1";
+      manageBtn.style.display = "none";
+    } else if (name === "autoscroll") {
+      // Scroll tab: no buttons needed
+      saveBtn.style.display = "none";
+      addBtn.style.display = "none";
+      manageBtn.style.display = "none";
     } else {
+      // Scripts tab: keep current state (show all buttons)
       saveBtn.style.display = "none";
       addBtn.style.display = "flex";
+      manageBtn.style.display = "flex";
+      manageBtn.style.flex = "";
     }
   }
 
@@ -316,9 +327,281 @@ class PopupManager {
   }
 }
 
-/* auto-refresh when storage changes */
+/* ════════════════════════════════════════════════
+   AUTO-SCROLL MANAGER
+   Injects a self-contained scroller into the active
+   tab via chrome.scripting / messaging.
+════════════════════════════════════════════════ */
+class AutoScrollManager {
+  constructor(popupManager) {
+    this.pm       = popupManager;
+    this.running  = false;
+    this.dir      = "down";   // "down" | "up"
+    this.mode     = "smooth"; // "smooth" | "step" | "loop"
+    this.speed    = 120;      // px / second
+    this.stepPx   = 200;      // px per step tick
+
+    this._progressInterval = null;
+
+    this._bindUI();
+    this._restoreState();
+  }
+
+  /* ── bind all UI elements ── */
+  _bindUI() {
+    /* start/stop */
+    document.getElementById("asToggleBtn")
+      .addEventListener("click", () => this.toggle());
+
+    /* speed slider */
+    const speedSlider = document.getElementById("asSpeed");
+    const speedVal    = document.getElementById("asSpeedVal");
+    speedSlider.addEventListener("input", () => {
+      this.speed = +speedSlider.value;
+      speedVal.textContent = this.speed;
+      if (this.running) this._sendUpdate();
+    });
+
+    /* step slider */
+    const stepSlider = document.getElementById("asStep");
+    const stepVal    = document.getElementById("asStepVal");
+    stepSlider.addEventListener("input", () => {
+      this.stepPx = +stepSlider.value;
+      stepVal.textContent = this.stepPx;
+      if (this.running) this._sendUpdate();
+    });
+
+    /* direction buttons */
+    document.querySelectorAll(".as-dir-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".as-dir-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.dir = btn.dataset.dir;
+        if (this.running) this._sendUpdate();
+      });
+    });
+
+    /* mode buttons */
+    document.querySelectorAll(".as-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".as-mode-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.mode = btn.dataset.mode;
+        if (this.running) this._sendUpdate();
+      });
+    });
+  }
+
+  /* ── restore persisted state from storage ── */
+  _restoreState() {
+    chrome.storage.local.get("autoScrollState", (result) => {
+      const s = result.autoScrollState;
+      if (!s) return;
+
+      if (s.speed !== undefined) {
+        this.speed = s.speed;
+        document.getElementById("asSpeed").value  = s.speed;
+        document.getElementById("asSpeedVal").textContent = s.speed;
+      }
+      if (s.stepPx !== undefined) {
+        this.stepPx = s.stepPx;
+        document.getElementById("asStep").value   = s.stepPx;
+        document.getElementById("asStepVal").textContent = s.stepPx;
+      }
+      if (s.dir) {
+        this.dir = s.dir;
+        document.querySelectorAll(".as-dir-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.dir === s.dir);
+        });
+      }
+      if (s.mode) {
+        this.mode = s.mode;
+        document.querySelectorAll(".as-mode-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === s.mode);
+        });
+      }
+
+      /* check if scroll is actually running in the tab */
+      if (s.running && this.pm.currentTab) {
+        this._queryRunning();
+      }
+    });
+  }
+
+  /* ask content script whether scroll is active */
+  _queryRunning() {
+    if (!this.pm.currentTab) return;
+    chrome.tabs.sendMessage(
+      this.pm.currentTab.id,
+      { action: "asQuery" },
+      (res) => {
+        if (chrome.runtime.lastError) return;
+        if (res && res.running) {
+          this.running = true;
+          this._setUI(true);
+        }
+      },
+    );
+  }
+
+  /* ── toggle start/stop ── */
+  toggle() {
+    if (this.running) {
+      this.stop();
+    } else {
+      this.start();
+    }
+  }
+
+  start() {
+    if (!this.pm.currentTab) {
+      this.pm.toast("No active tab", "error");
+      return;
+    }
+    const url = this.pm.currentTab.url || "";
+    if (url.startsWith("chrome://") || url.startsWith("chrome-extension://")) {
+      this.pm.toast("Cannot scroll system pages", "error");
+      return;
+    }
+
+    this._sendStart();
+  }
+
+  stop() {
+    if (!this.pm.currentTab) return;
+    chrome.tabs.sendMessage(
+      this.pm.currentTab.id,
+      { action: "asStop" },
+      () => { if (chrome.runtime.lastError) {} },
+    );
+    this.running = false;
+    this._setUI(false);
+    this._saveState();
+    this.pm.toast("Auto-scroll stopped ■", "");
+  }
+
+  /* ── send start command directly to content.js ── */
+  _sendStart() {
+    const tabId = this.pm.currentTab.id;
+    chrome.tabs.sendMessage(
+      tabId,
+      {
+        action: "asStart",
+        dir:    this.dir,
+        mode:   this.mode,
+        speed:  this.speed,
+        stepPx: this.stepPx,
+      },
+      (res) => {
+        if (chrome.runtime.lastError) {
+          this.pm.toast("Error: " + chrome.runtime.lastError.message, "error");
+          return;
+        }
+        if (!res?.ok) {
+          this.pm.toast("Could not start scroll", "error");
+          return;
+        }
+        this.running = true;
+        this._setUI(true);
+        this._saveState();
+        this.pm.toast("Auto-scroll started ▶", "success");
+        this._startProgressPoll();
+      },
+    );
+  }
+
+  _sendUpdate() {
+    if (!this.pm.currentTab) return;
+    chrome.tabs.sendMessage(
+      this.pm.currentTab.id,
+      {
+        action: "asUpdate",
+        dir:    this.dir,
+        mode:   this.mode,
+        speed:  this.speed,
+        stepPx: this.stepPx,
+      },
+      () => { if (chrome.runtime.lastError) {} },
+    );
+    this._saveState();
+  }
+
+  /* ── update UI to reflect running state ── */
+  _setUI(isRunning) {
+    const btn   = document.getElementById("asToggleBtn");
+    const icon  = document.getElementById("asToggleIcon");
+    const label = document.getElementById("asToggleLabel");
+    const dot   = document.getElementById("asStatusDot");
+    const txt   = document.getElementById("asStatusText");
+    const wrap  = document.getElementById("asProgressWrap");
+
+    if (isRunning) {
+      btn.classList.add("running");
+      icon.textContent  = "■";
+      label.textContent = "Stop Auto-Scroll";
+      dot.classList.add("active");
+      txt.innerHTML = `<strong>Running</strong> · ${this.mode} · ${this.dir} · ${this.speed} px/s`;
+      wrap.classList.add("visible");
+    } else {
+      btn.classList.remove("running");
+      icon.textContent  = "▶";
+      label.textContent = "Start Auto-Scroll";
+      dot.classList.remove("active");
+      txt.innerHTML = "Idle — press Start to begin";
+      wrap.classList.remove("visible");
+      clearInterval(this._progressInterval);
+      this._progressInterval = null;
+    }
+  }
+
+  /* ── poll scroll progress via content script ── */
+  _startProgressPoll() {
+    clearInterval(this._progressInterval);
+    this._progressInterval = setInterval(() => {
+      if (!this.running || !this.pm.currentTab) return;
+      chrome.tabs.sendMessage(
+        this.pm.currentTab.id,
+        { action: "asProgress" },
+        (res) => {
+          if (chrome.runtime.lastError || !res) return;
+          const pct = res.pct ?? 0;
+          document.getElementById("asProgressBar").style.width = pct + "%";
+          document.getElementById("asStatusText").innerHTML =
+            `<strong>Running</strong> · ${this.mode} · ${this.dir} · ${this.speed} px/s · <strong>${pct}%</strong>`;
+        },
+      );
+    }, 500);
+  }
+
+  /* ── persist settings to storage ── */
+  _saveState() {
+    chrome.storage.local.set({
+      autoScrollState: {
+        running: this.running,
+        dir:     this.dir,
+        mode:    this.mode,
+        speed:   this.speed,
+        stepPx:  this.stepPx,
+      },
+    });
+  }
+}
+
+/* ── auto-refresh when storage changes ── */
 chrome.storage.local.onChanged.addListener(() => {
   if (window._pm) window._pm.loadScripts();
 });
 
-window._pm = new PopupManager();
+/* ── boot ── */
+window._pm  = new PopupManager();
+
+/* Wait for PM to finish loading tab, then init AutoScroll */
+(function waitForTab() {
+  if (window._pm.currentTab !== null || document.readyState === "complete") {
+    window._as = new AutoScrollManager(window._pm);
+  } else {
+    setTimeout(waitForTab, 80);
+  }
+})();

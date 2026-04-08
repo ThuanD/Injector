@@ -1,5 +1,6 @@
 /**
  * ScriptRunner - Content script for the Injector Chrome extension
+ * Combines script auto-execution with auto-scroll functionality
  */
 class ScriptRunner {
   constructor() {
@@ -7,10 +8,12 @@ class ScriptRunner {
     this.executedScripts = new Set();
     this.pendingExecutions = new Map();
     this.lastUrl = location.href;
+    this.autoScroller = null;
     this.setupBridge();
     this.loadScripts();
     this.loadHiddenSettings();
     this.watchSPANavigation();
+    this.setupMessageListener();
   }
 
   setupBridge() {
@@ -24,12 +27,49 @@ class ScriptRunner {
     });
   }
 
+  setupMessageListener() {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      switch (message.action) {
+        case "executeScriptInMainWorld":
+          this.executeUserScript(message.code, message.scriptId);
+          sendResponse({ success: true });
+          break;
+
+        case "asStart":
+          this.startAutoScroll(message);
+          sendResponse({ ok: true });
+          break;
+
+        case "asStop":
+          this.stopAutoScroll();
+          sendResponse({ ok: true });
+          break;
+
+        case "asUpdate":
+          this.updateAutoScroll(message);
+          sendResponse({ ok: true });
+          break;
+
+        case "asQuery":
+          sendResponse({ running: this.autoScroller !== null });
+          break;
+
+        case "asProgress":
+          sendResponse({ pct: this.autoScroller ? this.autoScroller.getProgress() : 0 });
+          break;
+
+        default:
+          sendResponse({ error: "Unknown action" });
+      }
+    });
+  }
+
   async loadScripts() {
     try {
       chrome.runtime.sendMessage({ action: "getScripts" }, (response) => {
         if (!chrome.runtime.lastError && response && response.scripts) {
           this.scripts = response.scripts;
-          console.log("📜 Scripts loaded:", Object.keys(this.scripts).length);
+          console.log("Injector: Scripts loaded:", Object.keys(this.scripts).length);
           this.runScripts();
         }
       });
@@ -84,8 +124,7 @@ class ScriptRunner {
 
   /**
    * Monitor SPA navigation (URL changes without page reload)
-   * Only re-run scripts when URL actually changes — DO NOT re-run when DOM changes
-   * caused by the script itself (this is the cause of double execution)
+   * Only re-run scripts when URL actually changes
    */
   watchSPANavigation() {
     // Patch pushState / replaceState
@@ -139,16 +178,27 @@ class ScriptRunner {
       (response) => {
         if (chrome.runtime.lastError) {
           console.error(
-            `❌ Script failed for ${pattern}:`,
+            `Injector: Script failed for ${pattern}:`,
             chrome.runtime.lastError.message,
           );
         } else if (response && response.error) {
-          console.error(`❌ Script failed for ${pattern}:`, response.error);
+          console.error(`Injector: Script failed for ${pattern}:`, response.error);
         } else {
-          console.log(`✅ Script executed: ${name}`);
+          console.log(`Injector: Script executed: ${name}`);
         }
       },
     );
+  }
+
+  executeUserScript(code, scriptId) {
+    try {
+      // Create isolated function to avoid polluting global scope
+      const scriptFunction = new Function(code);
+      scriptFunction();
+      console.log(`Injector: User script executed: ${scriptId}`);
+    } catch (error) {
+      console.error(`Injector: Error executing script ${scriptId}:`, error);
+    }
   }
 
   async loadHiddenSettings() {
@@ -199,9 +249,163 @@ class ScriptRunner {
     }
 
     styleEl.textContent = `${selectors} { display: none !important; }`;
-    console.log("🚫 Hidden elements applied:", selectors);
+    console.log("Injector: Hidden elements applied:", selectors);
+  }
+
+  // ==================== AUTO-SCROLL FUNCTIONALITY ====================
+  
+  startAutoScroll(options) {
+    this.stopAutoScroll(); // Stop any existing scroller
+    this.autoScroller = new AutoScroller(options);
+    console.log("Injector: Auto-scroll started");
+  }
+
+  stopAutoScroll() {
+    if (this.autoScroller) {
+      this.autoScroller.stop();
+      this.autoScroller = null;
+      console.log("Injector: Auto-scroll stopped");
+    }
+  }
+
+  updateAutoScroll(options) {
+    if (this.autoScroller) {
+      this.autoScroller.update(options);
+      console.log("Injector: Auto-scroll updated");
+    }
   }
 }
+
+// ==================== AUTO-SCROLLER CLASS ====================
+
+class AutoScroller {
+  constructor(options) {
+    this.dir = options.dir || "down";
+    this.mode = options.mode || "smooth";
+    this.speed = options.speed || 120;
+    this.stepPx = options.stepPx || 200;
+    this.running = true;
+    this.lastTime = Date.now();
+    this.stepInterval = null;
+    this.animationFrame = null;
+
+    this.start();
+  }
+
+  start() {
+    this.running = true; // Ensure running state is set
+    if (this.mode === "smooth") {
+      this.startSmooth();
+    } else if (this.mode === "step") {
+      this.startStep();
+    } else if (this.mode === "loop") {
+      this.startLoop();
+    }
+  }
+
+  startSmooth() {
+    const scroll = () => {
+      if (!this.running) return;
+
+      const now = Date.now();
+      const delta = (now - this.lastTime) / 1000;
+      this.lastTime = now;
+
+      const scrollAmount = this.speed * delta;
+      const currentScroll = window.pageYOffset;
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+
+      let newScroll =
+        this.dir === "down"
+          ? currentScroll + scrollAmount
+          : currentScroll - scrollAmount;
+
+      // Handle boundaries
+      if (this.dir === "down" && newScroll >= maxScroll) {
+        newScroll = this.mode === "loop" ? 0 : maxScroll;
+      } else if (this.dir === "up" && newScroll <= 0) {
+        newScroll = this.mode === "loop" ? maxScroll : 0;
+      }
+
+      window.scrollTo(0, newScroll);
+      this.animationFrame = requestAnimationFrame(scroll);
+    };
+
+    this.animationFrame = requestAnimationFrame(scroll);
+  }
+
+  startStep() {
+    this.stepInterval = setInterval(() => {
+      if (!this.running) return;
+
+      const currentScroll = window.pageYOffset;
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+
+      let newScroll =
+        this.dir === "down"
+          ? currentScroll + this.stepPx
+          : currentScroll - this.stepPx;
+
+      // Handle boundaries
+      if (this.dir === "down" && newScroll >= maxScroll) {
+        newScroll = this.mode === "loop" ? 0 : maxScroll;
+      } else if (this.dir === "up" && newScroll <= 0) {
+        newScroll = this.mode === "loop" ? maxScroll : 0;
+      }
+
+      window.scrollTo(0, newScroll);
+    }, 1000);
+  }
+
+  startLoop() {
+    this.startSmooth(); // Loop uses smooth scrolling with boundary handling
+  }
+
+  update(options) {
+    // Update properties immediately
+    this.dir = options.dir || this.dir;
+    this.mode = options.mode || this.mode;
+    this.speed = options.speed || this.speed;
+    this.stepPx = options.stepPx || this.stepPx;
+
+    // If already running, restart immediately with new settings
+    if (this.running) {
+      const wasRunning = true;
+      this.stop();
+      // Use micro-delay to ensure proper cleanup
+      setTimeout(() => {
+        this.start();
+        console.log("Injector: Auto-scroll updated and restarted");
+      }, 10);
+    } else {
+      // If not running, just update the settings for next start
+      console.log("Injector: Auto-scroll settings updated");
+    }
+  }
+
+  stop() {
+    this.running = false;
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
+    }
+    if (this.stepInterval) {
+      clearInterval(this.stepInterval);
+      this.stepInterval = null;
+    }
+  }
+
+  getProgress() {
+    const currentScroll = window.pageYOffset;
+    const maxScroll =
+      document.documentElement.scrollHeight - window.innerHeight;
+    return maxScroll > 0 ? Math.round((currentScroll / maxScroll) * 100) : 0;
+  }
+}
+
+// ==================== INITIALIZATION ====================
 
 const scriptRunner = new ScriptRunner();
 
