@@ -48,6 +48,7 @@ class BackgroundScriptManager {
         await chrome.storage.local.set({
           userScripts: {},
           hiddenSettings: {},
+          autoScrollSettings: {},
           settings: { autoRun: true, debugMode: false },
         });
       } else {
@@ -56,6 +57,13 @@ class BackgroundScriptManager {
           await chrome.storage.local.get("hiddenSettings");
         if (!hiddenSettings) {
           await chrome.storage.local.set({ hiddenSettings: {} });
+        }
+
+        // Ensure autoScrollSettings exists for legacy updates
+        const { autoScrollSettings } =
+          await chrome.storage.local.get("autoScrollSettings");
+        if (!autoScrollSettings) {
+          await chrome.storage.local.set({ autoScrollSettings: {} });
         }
       }
     } catch (error) {
@@ -135,6 +143,16 @@ class BackgroundScriptManager {
           break;
         case "saveHiddenSettings":
           await this.saveHiddenSettings(
+            request.hostname,
+            request.settings,
+            sendResponse,
+          );
+          break;
+        case "getAutoScrollSettings":
+          await this.getAutoScrollSettings(request.hostname, sendResponse);
+          break;
+        case "saveAutoScrollSettings":
+          await this.saveAutoScrollSettings(
             request.hostname,
             request.settings,
             sendResponse,
@@ -527,6 +545,34 @@ class BackgroundScriptManager {
 
     await chrome.storage.local.set({ hiddenSettings: currentSettings });
     this.addLog(`Updated hidden elements for ${hostname}`, "save");
+    sendResponse({ success: true });
+  }
+
+  /**
+   * Retrieve auto scroll settings for a hostname
+   * @param {string} hostname - Target hostname
+   * @param {Function} sendResponse - Function to send settings back
+   */
+  async getAutoScrollSettings(hostname, sendResponse) {
+    const { autoScrollSettings } = await chrome.storage.local.get("autoScrollSettings");
+    const settings = autoScrollSettings || {};
+    sendResponse({ settings: settings[hostname] || { enabled: false } });
+  }
+
+  /**
+   * Save auto scroll settings for a hostname
+   * @param {string} hostname - Target hostname
+   * @param {Object} settings - Settings object { enabled: boolean }
+   * @param {Function} sendResponse - Function to send confirmation
+   */
+  async saveAutoScrollSettings(hostname, settings, sendResponse) {
+    const { autoScrollSettings } = await chrome.storage.local.get("autoScrollSettings");
+    const currentSettings = autoScrollSettings || {};
+
+    currentSettings[hostname] = settings;
+
+    await chrome.storage.local.set({ autoScrollSettings: currentSettings });
+    this.addLog(`Updated auto scroll for ${hostname}`, "save");
     sendResponse({ success: true });
   }
 

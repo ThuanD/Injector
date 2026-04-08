@@ -12,6 +12,7 @@ class ScriptRunner {
     this.setupBridge();
     this.loadScripts();
     this.loadHiddenSettings();
+    this.loadAutoScrollSettings();
     this.watchSPANavigation();
     this.setupMessageListener();
   }
@@ -56,6 +57,14 @@ class ScriptRunner {
 
         case "asProgress":
           sendResponse({ pct: this.autoScroller ? this.autoScroller.getProgress() : 0 });
+          break;
+
+        case "getAutoScrollSettings":
+          this.getAutoScrollSettings(message.hostname, sendResponse);
+          break;
+
+        case "saveAutoScrollSettings":
+          this.saveAutoScrollSettings(message.hostname, message.settings, sendResponse);
           break;
 
         default:
@@ -252,6 +261,427 @@ class ScriptRunner {
     console.log("Injector: Hidden elements applied:", selectors);
   }
 
+  async loadAutoScrollSettings() {
+    try {
+      chrome.runtime.sendMessage(
+        { action: "getAutoScrollSettings", hostname: window.location.hostname },
+        (response) => {
+          if (response && response.settings) {
+            this.applyAutoScrollSettings(response.settings);
+          }
+        },
+      );
+    } catch (error) {
+      console.warn("Failed to load auto scroll settings:", error);
+    }
+  }
+
+  getAutoScrollSettings(hostname, callback) {
+    chrome.storage.local.get("autoScrollSettings", (result) => {
+      const settings = result.autoScrollSettings || {};
+      const siteSettings = settings[hostname] || { enabled: false };
+      callback({ settings: siteSettings });
+    });
+  }
+
+  saveAutoScrollSettings(hostname, settings, callback) {
+    chrome.storage.local.get("autoScrollSettings", (result) => {
+      const allSettings = result.autoScrollSettings || {};
+      allSettings[hostname] = settings;
+      chrome.storage.local.set({ autoScrollSettings: allSettings }, () => {
+        callback({ success: true });
+        // Apply settings immediately
+        this.applyAutoScrollSettings(settings);
+      });
+    });
+  }
+
+  applyAutoScrollSettings(settings) {
+    if (settings.enabled) {
+      this.showAutoScrollControls();
+    } else {
+      this.hideAutoScrollControls();
+      this.stopAutoScroll();
+    }
+  }
+
+  showAutoScrollControls() {
+    // Remove existing controls
+    this.hideAutoScrollControls();
+
+    // Create controls container
+    const controls = document.createElement("div");
+    controls.id = "injector-autoscroll-controls";
+    controls.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px; z-index: 999999;
+      display: flex; flex-direction: row; gap: 10px;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    // Start/Stop button
+    const startStopBtn = document.createElement("button");
+    startStopBtn.id = "injector-autoscroll-startstop";
+    startStopBtn.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none; border-radius: 50%;
+      color: white; padding: 12px; cursor: pointer;
+      font-size: 13px; font-weight: 600; width: 48px; height: 48px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    `;
+    startStopBtn.innerHTML = `
+      <span style="font-size: 18px;">${this.autoScroller ? '⏸' : '▶'}</span>
+    `;
+    startStopBtn.title = this.autoScroller ? "Pause Auto-Scroll" : "Start Auto-Scroll";
+    startStopBtn.addEventListener("click", () => this.toggleAutoScroll());
+
+    // Settings button
+    const settingsBtn = document.createElement("button");
+    settingsBtn.id = "injector-autoscroll-settings";
+    settingsBtn.style.cssText = `
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border: none; border-radius: 50%;
+      color: white; padding: 12px; cursor: pointer;
+      font-size: 13px; font-weight: 600; width: 48px; height: 48px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    `;
+    settingsBtn.innerHTML = `
+      <span style="font-size: 18px;">⚙</span>
+    `;
+    settingsBtn.title = "Auto-Scroll Settings";
+    settingsBtn.addEventListener("click", () => this.showSettingsPopup());
+
+    // Add ripple effect
+    const createRipple = (btn, e) => {
+      const ripple = document.createElement('span');
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = e.clientX - rect.left - size / 2;
+      const y = e.clientY - rect.top - size / 2;
+      
+      ripple.style.cssText = `
+        position: absolute; border-radius: 50%; background: rgba(255,255,255,0.3);
+        width: ${size}px; height: ${size}px; left: ${x}px; top: ${y}px;
+        transform: scale(0); animation: ripple 0.6s linear;
+        pointer-events: none;
+      `;
+      
+      btn.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    };
+
+    // Add enhanced hover effects and ripple
+    [startStopBtn, settingsBtn].forEach(btn => {
+      btn.addEventListener("mouseenter", () => {
+        btn.style.transform = "translateY(-3px) scale(1.05)";
+        btn.style.boxShadow = btn === startStopBtn 
+          ? "0 8px 25px rgba(102, 126, 234, 0.6)"
+          : "0 8px 25px rgba(240, 147, 251, 0.6)";
+      });
+      
+      btn.addEventListener("mouseleave", () => {
+        btn.style.transform = "translateY(0) scale(1)";
+        btn.style.boxShadow = btn === startStopBtn 
+          ? "0 4px 15px rgba(102, 126, 234, 0.4)"
+          : "0 4px 15px rgba(240, 147, 251, 0.4)";
+      });
+
+      btn.addEventListener("mousedown", (e) => {
+        btn.style.transform = "translateY(-1px) scale(0.98)";
+        createRipple(btn, e);
+      });
+      
+      btn.addEventListener("mouseup", () => {
+        btn.style.transform = "translateY(-3px) scale(1.05)";
+      });
+    });
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+      
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      #injector-autoscroll-controls {
+        animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      #injector-autoscroll-controls button::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+      }
+      
+      #injector-autoscroll-controls button:hover::before {
+        left: 100%;
+      }
+    `;
+    document.head.appendChild(style);
+
+    controls.appendChild(startStopBtn);
+    controls.appendChild(settingsBtn);
+    document.body.appendChild(controls);
+
+    console.log("Injector: Auto-scroll controls added");
+  }
+
+  hideAutoScrollControls() {
+    const controls = document.getElementById("injector-autoscroll-controls");
+    if (controls) {
+      controls.remove();
+      console.log("Injector: Auto-scroll controls removed");
+    }
+    this.hideSettingsPopup();
+  }
+
+  toggleAutoScroll() {
+    const btn = document.getElementById("injector-autoscroll-startstop");
+    if (this.autoScroller) {
+      this.stopAutoScroll();
+      // Update button to Start state
+      btn.innerHTML = `
+        <span style="font-size: 18px;">▶</span>
+      `;
+      btn.title = "Start Auto-Scroll";
+      btn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+      btn.style.boxShadow = "0 4px 15px rgba(102, 126, 234, 0.4)";
+    } else {
+      this.startAutoScroll({
+        dir: "down",
+        mode: "smooth",
+        speed: 120,
+        stepPx: 200
+      });
+      // Update button to Pause state
+      btn.innerHTML = `
+        <span style="font-size: 18px;">⏸</span>
+      `;
+      btn.title = "Pause Auto-Scroll";
+      btn.style.background = "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)";
+      btn.style.boxShadow = "0 4px 15px rgba(240, 147, 251, 0.4)";
+    }
+  }
+
+  showSettingsPopup() {
+    // Remove existing popup
+    this.hideSettingsPopup();
+
+    // Create popup
+    const popup = document.createElement("div");
+    popup.id = "injector-autoscroll-settings-popup";
+    popup.style.cssText = `
+      position: fixed; bottom: 80px; right: 20px; z-index: 1000000;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      border: 1px solid rgba(124, 108, 248, 0.3); border-radius: 16px;
+      padding: 20px; min-width: 280px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      backdrop-filter: blur(10px);
+    `;
+
+    popup.innerHTML = `
+      <div style="font-weight: 700; margin-bottom: 16px; font-size: 16px; text-align: center; color: #fff;">
+        Auto-Scroll Settings
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Direction</div>
+        <div style="display: flex; gap: 8px;">
+          <button data-dir="down" class="dir-btn" style="flex: 1; padding: 8px; border: 2px solid #7c6cf8; background: linear-gradient(135deg, #7c6cf8, #6b5bc7); color: white; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Down</button>
+          <button data-dir="up" class="dir-btn" style="flex: 1; padding: 8px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Up</button>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Mode</div>
+        <div style="display: flex; gap: 6px;">
+          <button data-mode="smooth" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid #f5a623; background: linear-gradient(135deg, #f5a623, #e09512); color: white; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Smooth</button>
+          <button data-mode="step" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Step</button>
+          <button data-mode="loop" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Loop</button>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Speed: <span id="speed-value" style="color: #7c6cf8; font-weight: 700;">120</span> px/s</div>
+        <input type="range" id="speed-slider" min="10" max="800" value="120" style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none;">
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Step: <span id="step-value" style="color: #f5a623; font-weight: 700;">200</span> px</div>
+        <input type="range" id="step-slider" min="50" max="1000" value="200" style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none;">
+      </div>
+      
+      <button id="close-settings" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; cursor: pointer; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Close</button>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Store current settings
+    const currentSettings = {
+      dir: this.autoScroller ? this.autoScroller.dir : "down",
+      mode: this.autoScroller ? this.autoScroller.mode : "smooth",
+      speed: this.autoScroller ? this.autoScroller.speed : 120,
+      stepPx: this.autoScroller ? this.autoScroller.stepPx : 200
+    };
+
+    // Setup event listeners
+    popup.querySelectorAll(".dir-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        popup.querySelectorAll(".dir-btn").forEach(b => {
+          b.style.background = "rgba(255,255,255,0.05)";
+          b.style.borderColor = "rgba(255,255,255,0.1)";
+          b.style.color = "#a8a8b8";
+        });
+        btn.style.background = "linear-gradient(135deg, #7c6cf8, #6b5bc7)";
+        btn.style.borderColor = "#7c6cf8";
+        btn.style.color = "white";
+        currentSettings.dir = btn.dataset.dir;
+        if (this.autoScroller) {
+          this.autoScroller.dir = currentSettings.dir;
+        }
+      });
+      
+      btn.addEventListener("mouseenter", () => {
+        if (btn.style.background === "rgba(255,255,255,0.05)" || btn.style.background.includes("0.05")) {
+          btn.style.background = "rgba(255,255,255,0.1)";
+          btn.style.borderColor = "rgba(255,255,255,0.2)";
+        }
+      });
+      
+      btn.addEventListener("mouseleave", () => {
+        if (btn.style.background === "rgba(255,255,255,0.1)" || btn.style.background.includes("0.1")) {
+          btn.style.background = "rgba(255,255,255,0.05)";
+          btn.style.borderColor = "rgba(255,255,255,0.1)";
+        }
+      });
+    });
+
+    popup.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        popup.querySelectorAll(".mode-btn").forEach(b => {
+          b.style.background = "rgba(255,255,255,0.05)";
+          b.style.borderColor = "rgba(255,255,255,0.1)";
+          b.style.color = "#a8a8b8";
+        });
+        btn.style.background = "linear-gradient(135deg, #f5a623, #e09512)";
+        btn.style.borderColor = "#f5a623";
+        btn.style.color = "white";
+        currentSettings.mode = btn.dataset.mode;
+        if (this.autoScroller) {
+          this.autoScroller.mode = currentSettings.mode;
+        }
+      });
+      
+      btn.addEventListener("mouseenter", () => {
+        if (btn.style.background === "rgba(255,255,255,0.05)" || btn.style.background.includes("0.05")) {
+          btn.style.background = "rgba(255,255,255,0.1)";
+          btn.style.borderColor = "rgba(255,255,255,0.2)";
+        }
+      });
+      
+      btn.addEventListener("mouseleave", () => {
+        if (btn.style.background === "rgba(255,255,255,0.1)" || btn.style.background.includes("0.1")) {
+          btn.style.background = "rgba(255,255,255,0.05)";
+          btn.style.borderColor = "rgba(255,255,255,0.1)";
+        }
+      });
+    });
+
+    const speedSlider = popup.querySelector("#speed-slider");
+    const speedValue = popup.querySelector("#speed-value");
+    speedSlider.addEventListener("input", () => {
+      currentSettings.speed = parseInt(speedSlider.value);
+      speedValue.textContent = currentSettings.speed;
+      if (this.autoScroller) {
+        this.autoScroller.speed = currentSettings.speed;
+      }
+    });
+
+    const stepSlider = popup.querySelector("#step-slider");
+    const stepValue = popup.querySelector("#step-value");
+    stepSlider.addEventListener("input", () => {
+      currentSettings.stepPx = parseInt(stepSlider.value);
+      stepValue.textContent = currentSettings.stepPx;
+      if (this.autoScroller) {
+        this.autoScroller.stepPx = currentSettings.stepPx;
+      }
+    });
+
+    // Add slider styling
+    const style = document.createElement('style');
+    style.textContent = `
+      #injector-autoscroll-settings-popup input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        background: linear-gradient(135deg, #7c6cf8, #6b5bc7);
+        cursor: pointer;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(124, 108, 248, 0.5);
+      }
+      
+      #injector-autoscroll-settings-popup input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: linear-gradient(135deg, #7c6cf8, #6b5bc7);
+        cursor: pointer;
+        border-radius: 50%;
+        border: none;
+        box-shadow: 0 2px 8px rgba(124, 108, 248, 0.5);
+      }
+      
+      #injector-autoscroll-settings-popup #close-settings:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+    `;
+    document.head.appendChild(style);
+
+    popup.querySelector("#close-settings").addEventListener("click", () => {
+      this.hideSettingsPopup();
+    });
+
+    // Close popup when clicking outside
+    const closeHandler = (e) => {
+      if (!popup.contains(e.target)) {
+        this.hideSettingsPopup();
+        document.removeEventListener("click", closeHandler);
+      }
+    };
+    setTimeout(() => document.addEventListener("click", closeHandler), 100);
+  }
+
+  hideSettingsPopup() {
+    const popup = document.getElementById("injector-autoscroll-settings-popup");
+    if (popup) {
+      popup.remove();
+    }
+  }
+
   // ==================== AUTO-SCROLL FUNCTIONALITY ====================
   
   startAutoScroll(options) {
@@ -424,7 +854,6 @@ class AutoScroller {
     const indicator = document.getElementById('injector-autoscroll-indicator');
     if (indicator) {
       indicator.remove();
-      console.log('[AutoScroll] Visual indicator removed');
     }
   }
 
@@ -455,7 +884,7 @@ class AutoScroller {
       transition: all 0.3s ease;
     `;
     indicator.innerHTML = this.dir === 'down' ? '↓' : '↑';
-    indicator.title = 'Auto-scrolling (' + this.mode + ') - Click to stop';
+    indicator.title = 'Auto-scrolling (' + this.mode + ')';
     
     // Create mouse position indicator (center screen)
     const mouseIndicator = document.createElement('div');
@@ -481,16 +910,8 @@ class AutoScroller {
     `;
     document.head.appendChild(style);
     
-    // Click to stop
-    indicator.addEventListener('click', () => {
-      this.stop();
-      indicator.remove();
-      mouseIndicator.remove();
-    });
-    
     document.body.appendChild(indicator);
     document.body.appendChild(mouseIndicator);
-    console.log('[AutoScroll] Visual indicators added');
   }
 
   }
@@ -516,6 +937,14 @@ chrome.storage.local.onChanged.addListener((changes, namespace) => {
       const hostSettings = newSettings[window.location.hostname];
       if (hostSettings) {
         scriptRunner.applyHiddenStyles(hostSettings);
+      }
+    }
+
+    if (changes.autoScrollSettings) {
+      const newSettings = changes.autoScrollSettings.newValue || {};
+      const hostSettings = newSettings[window.location.hostname];
+      if (hostSettings) {
+        scriptRunner.applyAutoScrollSettings(hostSettings);
       }
     }
   }

@@ -865,63 +865,19 @@
 
     <!-- AutoScroll Panel -->
     <div class="panel" id="panel-autoscroll">
-      <div class="autoscroll-panel">
+      <div class="hide-panel">
+        <div class="section-label">Auto-Scroll</div>
 
-        <!-- progress bar -->
-        <div class="as-progress-wrap" id="asProgressWrap">
-          <div class="as-progress-bar" id="asProgressBar"></div>
+        <div class="hide-enabled-row">
+          <div class="hide-enabled-label">🚫 Enable on this site</div>
+          <label class="toggle-wrap">
+            <input type="checkbox" class="toggle" id="autoScrollToggle" />
+          </label>
         </div>
 
-        <!-- start / stop -->
-        <button class="as-toggle-btn" id="asToggleBtn">
-          <span id="asToggleIcon">▶</span>
-          <span id="asToggleLabel">Start Auto-Scroll</span>
-        </button>
-
-        <!-- status -->
-        <div class="as-status-row">
-          <div class="as-status-dot" id="asStatusDot"></div>
-          <div class="as-status-text" id="asStatusText">Idle — press Start to begin</div>
+        <div class="hint-text" style="font-size: 11px; color: var(--muted); margin-bottom: 7px">
+          When enabled, auto-scroll controls will appear at the bottom right of the page.
         </div>
-
-        <!-- speed & step controls -->
-        <div class="as-controls">
-          <!-- Speed -->
-          <div class="as-control-box">
-            <div class="as-control-label">⚡ Speed (px/s)</div>
-            <div class="as-control-value" id="asSpeedVal">120</div>
-            <input type="range" class="as-slider" id="asSpeed"
-              min="10" max="800" step="10" value="120" />
-          </div>
-
-          <!-- Step size (for step mode) -->
-          <div class="as-control-box">
-            <div class="as-control-label">📐 Step (px)</div>
-            <div class="as-control-value" id="asStepVal">200</div>
-            <input type="range" class="as-slider" id="asStep"
-              min="50" max="1000" step="50" value="200" />
-          </div>
-        </div>
-
-        <!-- direction -->
-        <div class="as-control-box" style="gap:8px">
-          <div class="as-control-label">↕ Direction</div>
-          <div class="as-dir-row">
-            <button class="as-dir-btn active" data-dir="down">▼ Down</button>
-            <button class="as-dir-btn" data-dir="up">▲ Up</button>
-          </div>
-        </div>
-
-        <!-- scroll mode -->
-        <div class="as-control-box" style="gap:8px">
-          <div class="as-control-label">🔁 Mode</div>
-          <div class="as-mode-row">
-            <button class="as-mode-btn active" data-mode="smooth">Smooth</button>
-            <button class="as-mode-btn" data-mode="step">Step</button>
-            <button class="as-mode-btn" data-mode="loop">Loop</button>
-          </div>
-        </div>
-
       </div>
     </div>
 
