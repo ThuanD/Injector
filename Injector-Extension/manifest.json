@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Injector - Auto-inject your scripts",
   "short_name": "Injector",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Run custom JavaScript code on specific websites automatically. Manage scripts per domain.",
   "icons": {
     "16": "icons/icon16.png",
