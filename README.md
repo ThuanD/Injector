@@ -1,6 +1,6 @@
 # ⚡ Injector
 
-> Tự động chạy JavaScript trên bất kỳ trang web nào — miễn phí, mã nguồn mở, không cần Chrome Web Store.
+> Automatically run JavaScript on any website — free, open-source, no Chrome Web Store required.
 
 ![Version](https://img.shields.io/badge/version-2.0.2-3dd6f5?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-7c6cf8?style=flat-square)
@@ -9,116 +9,95 @@
 
 ---
 
-## Giới thiệu
+## Introduction
 
-**Injector** là Chrome extension cho phép bạn tự động chạy đoạn JavaScript bất kỳ mỗi khi mở một trang web cụ thể. Dùng để ẩn quảng cáo, tự điền form, theo dõi giá, nhận thông báo Telegram — và rất nhiều thứ khác.
+**Injector** is a Chrome extension that allows you to automatically run any JavaScript code whenever you open a specific website. Use it to hide ads, auto-fill forms, monitor prices, receive Telegram notifications — and much more.
 
-Không cần biết lập trình. Extension có sẵn 20+ template, tích hợp prompt để nhờ ChatGPT viết script theo yêu cầu của bạn.
+🌐 **Visit our landing page:** [injector.thuandv.top](https://injector.thuandv.top)
 
-## Tính năng
+No programming knowledge required. The extension includes 20+ ready-to-use templates and integrated prompts to help you get custom scripts written by ChatGPT.
 
-- **Auto-inject Scripts** — Script tự động chạy khi load trang, hỗ trợ URL pattern với wildcard `*`
-- **20+ Templates** — Dùng ngay không cần code: xóa quảng cáo, dark mode, monitor giá, clean YouTube/Facebook/Twitter...
-- **AI-assisted** — Prompt mẫu tích hợp sẵn để nhờ ChatGPT/Gemini viết script theo yêu cầu
-- **Hide Elements** — Ẩn phần tử theo CSS selector trực tiếp từ popup, không cần viết code
-- **Telegram Notifications** — Nhận thông báo điện thoại khi giá thay đổi hoặc nội dung cập nhật
-- **SPA Support** — Tự động detect URL thay đổi trong React/Vue/Next.js và re-run script đúng lúc
-- **Export/Import** — Backup toàn bộ scripts ra JSON, chuyển sang máy khác dễ dàng
-- **CSP Bypass** — Dùng kỹ thuật nonce stealing để chạy script trên các trang có Content Security Policy nghiêm ngặt
+## Features
 
-## Cài đặt
+- **Auto-inject Scripts** — Scripts automatically run when pages load, supporting URL patterns with wildcard `*`
+- **20+ Templates** — Ready to use without coding: remove ads, dark mode, price monitoring, clean YouTube/Facebook/Twitter...
+- **AI-assisted** — Built-in prompt templates to get ChatGPT/Gemini to write scripts according to your requirements
+- **Hide Elements** — Hide elements by CSS selector directly from popup, no coding required
+- **Telegram Notifications** — Receive phone notifications when prices change or content updates
+- **SPA Support** — Automatically detects URL changes in React/Vue/Next.js and re-runs scripts at the right time
+- **Export/Import** — Backup all scripts to JSON, easily transfer to another machine
+- **CSP Bypass** — Uses nonce stealing technique to run scripts on pages with strict Content Security Policy
 
-Vì extension không có trên Chrome Web Store (Google thu phí $5 developer), bạn cài tay theo 4 bước:
+## Installation
 
-### Bước 1 — Tải về
+Since the extension is not available on Chrome Web Store (Google charges $5 developer fee), install it manually in 4 steps:
 
-Tải file ZIP từ trang [Releases](https://github.com/ThuanD/Injector/releases), hoặc dùng link trực tiếp:
+### Step 1 — Download
+
+Download the ZIP file from the [Releases](https://github.com/ThuanD/Injector/releases) page, or use the direct link:
 
 ```bash
 curl -L https://github.com/ThuanD/Injector/releases/latest/download/Injector-Extension.zip -o Injector.zip
 ```
 
-### Bước 2 — Giải nén
+### Step 2 — Extract
 
-Giải nén file ZIP. Bạn sẽ có thư mục `Injector-main/`.
+Extract the ZIP file. You will have the `Injector-main/` directory.
 
-### Bước 3 — Bật Developer Mode
+### Step 3 — Enable Developer Mode
 
-Mở Chrome, vào `chrome://extensions`, bật công tắc **Developer mode** góc trên bên phải.
+Open Chrome, go to `chrome://extensions`, turn on the **Developer mode** toggle in the top right corner.
 
-### Bước 4 — Load extension
+### Step 4 — Load extension
 
-Nhấn **Load unpacked** → mở vào thư mục `Injector-main` → chọn tiếp thư mục con **`Injector-Extension`**.
+Click **Load unpacked** → navigate to the `Injector-main` directory → select the subdirectory **`Injector-Extension`**.
 
-Icon ⚡ sẽ xuất hiện trên toolbar — cài đặt hoàn tất.
+The ⚡ icon will appear on your toolbar — installation complete.
 
-## Cấu trúc project
+## Usage Guide
 
-```
-Injector/
-├── Injector-Extension/     # Source code extension
-│   ├── manifest.json        # Manifest V3 config
-│   ├── background.js        # Service worker: storage, messaging
-│   ├── content.js           # Script runner: inject & execute
-│   ├── popup.html/js        # Popup UI
-│   ├── options.html/js      # Script manager (full UI)
-│   ├── templates.js         # 20+ script templates
-│   └── icons/               # Extension icons
-├── index.html               # Landing page
-├── og-image.png             # OG image cho social share
-├── site.webmanifest         # Web app manifest
-├── robots.txt
-├── sitemap.xml
-└── README.md
-```
+### Using ready-made templates
 
-## Hướng dẫn sử dụng
+1. Click the ⚡ icon on the toolbar → **Manage All Scripts**
+2. Go to the **📋 Templates** tab, select the appropriate template
+3. Fill in **URL Pattern** — which pages you want the script to run on (e.g., `*.youtube.com`)
+4. Click **＋ Add Script** → reload the page and you're done
 
-### Dùng template có sẵn
+### Writing scripts with AI
 
-1. Click icon ⚡ trên toolbar → **Manage All Scripts**
-2. Vào tab **📋 Templates**, chọn template phù hợp
-3. Điền **URL Pattern** — trang nào bạn muốn script chạy (ví dụ: `*.youtube.com`)
-4. Nhấn **＋ Add Script** → reload trang là xong
-
-### Viết script bằng AI
-
-1. Vào tab **📖 Guide** trong Options page
-2. Copy một trong các **prompt mẫu** theo loại việc bạn muốn làm
-3. Paste vào ChatGPT, mô tả yêu cầu → nhận code
-4. Tạo script mới, paste code vào, điền URL Pattern → lưu
+1. Go to the **📖 Guide** tab in the Options page
+2. Copy one of the **sample prompts** according to the type of task you want to do
+3. Paste into ChatGPT, describe your requirements → get the code
+4. Create a new script, paste the code, fill in URL Pattern → save
 
 ### URL Pattern
 
-| Pattern | Ý nghĩa |
+| Pattern | Meaning |
 |---|---|
-| `*` | Chạy trên mọi trang |
-| `*.youtube.com` | Mọi trang YouTube |
-| `*.tiki.vn/product/*` | Chỉ trang sản phẩm Tiki |
-| `https://docs.google.com/*` | Mọi Google Docs |
+| `*` | Run on all pages |
+| `*.youtube.com` | All YouTube pages |
+| `*.tiki.vn/product/*` | Only Tiki product pages |
+| `https://docs.google.com/*` | All Google Docs |
 
-## Cảnh báo bảo mật
+## Security Warning
 
-Script JavaScript có thể **đọc mọi nội dung trên trang**, bao gồm mật khẩu, cookie, thông tin thẻ ngân hàng.
+JavaScript scripts can **read all content on the page**, including passwords, cookies, and banking information.
 
-- **Không** paste code từ người lạ gửi qua mạng xã hội, Zalo, Telegram
-- **Không** chạy script trên trang ngân hàng, ví điện tử, trang đăng nhập quan trọng
-- **Nên** đọc kỹ code hoặc nhờ ChatGPT giải thích trước khi chạy
+- **Do not** paste code from strangers sent via social media, Zalo, Telegram
+- **Do not** run scripts on banking, e-wallet, or important login pages
+- **Should** read the code carefully or have ChatGPT explain it before running
 
-## Đóng góp
+## Contributing
 
-Pull request và issue luôn được chào đón. Một số hướng đóng góp:
+Pull requests and issues are always welcome. Some ways to contribute:
 
-- Thêm template mới vào `templates.js`
-- Fix bug, cải thiện tính năng
-- Cải thiện UI/UX
+- Add new templates to `templates.js`
+- Fix bugs, improve features
+- Improve UI/UX
 
-## Ủng hộ
+## Support
 
-Nếu extension hữu ích với bạn, hãy ủng hộ tác giả một que Chupa Chups ☕
+If the extension is useful to you, please support the author with a Chupa Chups ☕
 
 [![Buy me a Chupa Chups](https://img.shields.io/badge/Buy%20me%20a%20Chupa%20Chups-🍭-f5a623?style=flat-square)](https://www.buymeacoffee.com/thuandv)
 
-## License
-
-[MIT](LICENSE) — Tự do sử dụng, chỉnh sửa và phân phối.
