@@ -76,7 +76,7 @@ class OptionsManager {
   /* ── LOAD & RENDER ── */
   async loadScripts() {
     return new Promise(resolve => {
-      // Đọc trực tiếp từ storage, không qua background message để tránh race condition
+      // Read directly from storage, bypassing background message to avoid race conditions
       chrome.storage.local.get('userScripts', (result) => {
         this.scripts = result.userScripts || {};
         this.filtered = { ...this.scripts };
@@ -143,7 +143,7 @@ class OptionsManager {
       <div class="sc-top">
         <div class="sc-dot ${enabled ? '' : 'off'}"></div>
         <div class="sc-name" title="${this.esc(script.name)}">${this.esc(script.name)}</div>
-        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="Toggle">
+        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="${enabled ? 'Auto-run' : 'Disable'}">
       </div>
       <div class="sc-pattern" title="${this.esc(script.pattern || id)}">${this.esc(script.pattern || id)}</div>
       <div class="sc-desc">${this.esc(script.description || 'No description')}</div>
@@ -252,10 +252,6 @@ class OptionsManager {
           <input type="text" id="f-pattern" class="form-input" placeholder="*.example.com" value="${this.esc(s?.pattern || '')}">
         </div>
         <div class="form-group full">
-          <label class="form-label">Description</label>
-          <textarea id="f-desc" class="form-textarea" rows="2" placeholder="What does this script do?">${this.esc(s?.description || '')}</textarea>
-        </div>
-        <div class="form-group full">
           <div class="pattern-hint">
             <strong style="color:var(--text)">Pattern examples:</strong>
             &nbsp;
@@ -266,21 +262,34 @@ class OptionsManager {
           </div>
         </div>
         <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea id="f-desc" class="form-textarea" rows="2" placeholder="What does this script do?">${this.esc(s?.description || '')}</textarea>
+        </div>
+        <div class="form-group full">
           <label class="form-label">JavaScript Code <span class="req">*</span></label>
           <div class="code-warning">
             <div class="code-warning-icon">⚠️</div>
             <div class="code-warning-text">
-              <strong>Chỉ paste code từ nguồn bạn tin tưởng.</strong>
-              Script có thể đọc mọi dữ liệu trên trang — kể cả mật khẩu và cookie.
-              Không chắc code làm gì? <a href="#" onclick="document.querySelector('[data-page=\\'guide\\']').click();return false">Đọc hướng dẫn →</a>
+              <strong>Only paste code from trusted sources.</strong>
+              This script can read all data on the page â including passwords and cookies.
+              Not sure what this code does? <a href="#" onclick="document.querySelector('[data-page=\'guide\']').click();return false">Learn more â</a>
             </div>
           </div>
           <textarea id="f-code" class="form-textarea code" placeholder="// Your JavaScript code here…">${this.esc(s?.code || '')}</textarea>
         </div>
-        <label class="confirm-row" id="secConfirmRow">
-          <input type="checkbox" id="secConfirm">
-          <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong></span>
-        </label>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="f-enabled" ${s?.enabled === true ? 'checked' : ''}>
+            <span class="checkmark"></span>
+            Enable this script (run automatically on matching pages)
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="confirm-row" id="secConfirmRow">
+            <input type="checkbox" id="secConfirm">
+            <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong></span>
+          </label>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="modal-btn cancel close-btn">Cancel</button>
@@ -315,24 +324,31 @@ class OptionsManager {
           <label class="form-label">URL Pattern <span class="req">*</span></label>
           <input type="text" id="f-pattern" class="form-input" placeholder="*.example.com">
         </div>
-        <div class="form-group full">
+        <div class="form-group">
           <label class="form-label">Description</label>
           <textarea id="f-desc" class="form-textarea" rows="2">${this.esc(tpl.description)}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="f-enabled">
+            <span class="checkmark"></span>
+            Enable this script (run automatically on matching pages)
+          </label>
         </div>
         <div class="form-group full">
           <label class="form-label">JavaScript Code <span class="req">*</span></label>
           <div class="code-warning">
             <div class="code-warning-icon">⚠️</div>
             <div class="code-warning-text">
-              <strong>Chỉ paste code từ nguồn bạn tin tưởng.</strong>
-              Script có thể đọc mọi dữ liệu trên trang — kể cả mật khẩu và cookie.
-              Không chắc code làm gì? <a href="#" onclick="document.querySelector('[data-page=\\'guide\\']').click();return false">Đọc hướng dẫn →</a>
+              <strong>Only paste code from trusted sources.</strong>
+              The script can read all data on the page — including passwords and cookies.
+              Are you sure the code is safe? <a href="#" onclick="document.querySelector('[data-page=\'guide\']').click();return false">Read guide →</a>
             </div>
           </div>
           <textarea id="f-code" class="form-textarea code">${this.esc(tpl.code)}</textarea>
         </div>
         <label class="confirm-row" id="secConfirmRow">
-          <input type="checkbox" id="secConfirm" checked>
+          <input type="checkbox" id="secConfirm">
           <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong> <span style="color:var(--success);font-size:11px">(template has been reviewed ✓)</span></span>
         </label>
       </div>
@@ -353,6 +369,7 @@ class OptionsManager {
     const pattern = overlay.querySelector('#f-pattern').value.trim();
     const desc    = overlay.querySelector('#f-desc').value.trim();
     const code    = overlay.querySelector('#f-code').value.trim();
+    const enabled = overlay.querySelector('#f-enabled').checked;
 
     if (!name || !pattern || !code) {
       this.toast('Please fill in Name, Pattern and Code', 'error');
@@ -371,11 +388,11 @@ class OptionsManager {
         row.style.borderColor = 'rgba(255,90,113,.5)';
         setTimeout(() => { row.style.borderColor = ''; }, 1500);
       }
-      this.toast('⚠️ Hãy xác nhận bạn tin tưởng code này trước khi lưu', 'error');
+      this.toast('⚠️ Please confirm that you trust this code before saving', 'error');
       return;
     }
 
-    const scriptData = { name, description: desc, code, pattern };
+    const scriptData = { name, description: desc, code, pattern, enabled };
     const oldId = this.editId;
 
     const saveBtn = overlay.querySelector('.save-btn');
@@ -402,7 +419,6 @@ class OptionsManager {
 
       all[scriptId] = {
         ...scriptData,
-        enabled: all[scriptId]?.enabled ?? true,
         createdAt: all[scriptId]?.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
@@ -450,7 +466,7 @@ class OptionsManager {
     categories.forEach(cat => {
       const chip = document.createElement('button');
       chip.className = 'tpl-chip' + (cat === 'all' ? ' tpl-chip-all active' : '');
-      chip.textContent = cat === 'all' ? '✦ Tất cả' : cat;
+      chip.textContent = cat === 'all' ? '✦ All' : cat;
       chip.addEventListener('click', () => {
         this._tplCategory = cat;
         chipsEl.querySelectorAll('.tpl-chip').forEach(c => c.classList.remove('active'));
@@ -502,7 +518,7 @@ class OptionsManager {
     // Result count
     if (q || cat !== 'all') {
       countEl.textContent = filtered.length === 0
-        ? 'Không tìm thấy template nào'
+        ? 'No templates found'
         : `${filtered.length} / ${allEntries.length} templates`;
     } else {
       countEl.textContent = `${allEntries.length} templates`;
@@ -722,18 +738,18 @@ Requirements:
         label: 'General',
         title: 'Free description in Vietnamese',
         preview: 'Use when you know what you want but don\'t know which prompt to use...',
-        prompt: `Tôi muốn tạo một script JavaScript chạy tự động trên trang [TÊN TRANG WEB].
+        prompt: `I want to create a JavaScript script that runs automatically on [WEBSITE NAME].
 
-Mục tiêu: [MÔ TẢ ĐIỀU BẠN MUỐN SCRIPT LÀM - càng chi tiết càng tốt, viết tiếng Việt cũng được]
+Goal: [DESCRIBE WHAT YOU WANT THE SCRIPT TO DO IN DETAIL - be as specific as possible, in English]
 
-Yêu cầu kỹ thuật (bắt buộc để script hoạt động với extension của tôi):
-- Bọc trong IIFE: (function() { ... })();
-- Chỉ dùng vanilla JavaScript, không dùng thư viện ngoài
-- Thêm console.log('[Injector] Done') ở cuối
-- Các giá trị có thể cấu hình (CSS selector, thời gian, text...) đặt thành hằng số ở đầu file kèm comment giải thích
-- Nếu cần xử lý element load động, dùng MutationObserver hoặc setTimeout
+Technical requirements (must be fulfilled so that the script works with my extension):
+- Wrap in IIFE: (function() { ... })();
+- Only use vanilla JavaScript, no external libraries
+- Add console.log('[Injector] Done') at the end
+- Define configurable selectors as constants at the top with comments
+- If necessary, handle dynamically loading elements with MutationObserver or setTimeout
 
-Trả về cho tôi đoạn code hoàn chỉnh, không cần giải thích dài dòng.`,
+Return to me a complete code block without detailed explanations.`,
       },
     ];
 
