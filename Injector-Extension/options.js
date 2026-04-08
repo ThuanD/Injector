@@ -143,7 +143,7 @@ class OptionsManager {
       <div class="sc-top">
         <div class="sc-dot ${enabled ? '' : 'off'}"></div>
         <div class="sc-name" title="${this.esc(script.name)}">${this.esc(script.name)}</div>
-        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="${enabled ? 'Auto-run' : 'Disable'}">
+        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="${enabled ? 'Auto-run' : 'Manual'}">
       </div>
       <div class="sc-pattern" title="${this.esc(script.pattern || id)}">${this.esc(script.pattern || id)}</div>
       <div class="sc-desc">${this.esc(script.description || 'No description')}</div>

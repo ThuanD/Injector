@@ -202,15 +202,7 @@ class PopupManager {
       });
     });
     div.querySelector(".del").addEventListener("click", () => {
-      if (!confirm(`Delete "${script.name}"?`)) return;
-      chrome.storage.local.get("userScripts", (result) => {
-        const all = result.userScripts || {};
-        delete all[script.id];
-        chrome.storage.local.set({ userScripts: all }, () => {
-          this.toast(`"${script.name}" deleted`, "");
-          this.loadScripts();
-        });
-      });
+      this.showDeleteDialog(script);
     });
 
     return div;
@@ -224,6 +216,132 @@ class PopupManager {
         enabled ? "Script enabled ✓" : "Script disabled",
         enabled ? "success" : "",
       );
+    });
+  }
+
+  showDeleteDialog(script) {
+    // Create modal overlay
+    const modal = document.createElement("div");
+    modal.className = "injector-delete-modal";
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      overflow: hidden;
+    `;
+    
+    // Create dialog content
+    const dialog = document.createElement("div");
+    dialog.style.cssText = `
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      border: 1px solid rgba(124, 108, 248, 0.3); border-radius: 16px;
+      padding: 24px; min-width: 320px; max-width: 340px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      backdrop-filter: blur(10px);
+      animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform, opacity;
+      margin: 20px;
+    `;
+
+    // Add animation keyframes to document head
+    if (!document.querySelector('#injector-dialog-animations')) {
+      const style = document.createElement('style');
+      style.id = 'injector-dialog-animations';
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    dialog.innerHTML = `
+      <div style="font-weight: 700; margin-bottom: 16px; font-size: 18px; text-align: center;">
+        ⚠️️ Delete Script
+      </div>
+      <div style="margin-bottom: 20px; color: #a8a8b8; line-height: 1.5;">
+        Are you sure you want to delete "<strong>${this.esc(script.name)}</strong>"?
+        <br><br>
+        This action cannot be undone.
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button id="cancel-delete" style="
+          flex: 1; padding: 10px 16px; border: none; border-radius: 8px;
+          background: rgba(255,255,255,0.1); color: #a8a8b8; cursor: pointer;
+          font-size: 13px; font-weight: 600; transition: all 0.2s;
+        ">Cancel</button>
+        <button id="confirm-delete" style="
+          flex: 1; padding: 10px 16px; border: none; border-radius: 8px;
+          background: linear-gradient(135deg, #ff5a71 0%, #ff3838 100%);
+          color: white; cursor: pointer; font-size: 13px; font-weight: 600;
+          transition: all 0.2s;
+        ">Delete</button>
+      </div>
+    `;
+
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
+    
+    // Force reflow to ensure proper positioning
+    modal.offsetHeight;
+
+    // Add event listeners
+    const cancelBtn = dialog.querySelector("#cancel-delete");
+    const confirmBtn = dialog.querySelector("#confirm-delete");
+
+    cancelBtn.addEventListener("click", () => {
+      this.hideDeleteDialog();
+    });
+
+    confirmBtn.addEventListener("click", () => {
+      this.hideDeleteDialog();
+      this.deleteScript(script);
+    });
+
+    // Close on backdrop click
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        this.hideDeleteDialog();
+      }
+    });
+
+    // Add keyboard support
+    const handleKeydown = (e) => {
+      if (e.key === "Escape") {
+        this.hideDeleteDialog();
+        document.removeEventListener("keydown", handleKeydown);
+      }
+    };
+    document.addEventListener("keydown", handleKeydown);
+    
+    // Store reference for cleanup
+    modal._handleKeydown = handleKeydown;
+  }
+
+  hideDeleteDialog() {
+    const modal = document.querySelector(".injector-delete-modal");
+    if (modal) {
+      if (modal._handleKeydown) {
+        document.removeEventListener("keydown", modal._handleKeydown);
+      }
+      modal.remove();
+    }
+  }
+
+  deleteScript(script) {
+    chrome.storage.local.get("userScripts", (result) => {
+      const all = result.userScripts || {};
+      delete all[script.id];
+      chrome.storage.local.set({ userScripts: all }, () => {
+        this.toast(`"${script.name}" deleted`, "success");
+        this.loadScripts();
+      });
     });
   }
 
@@ -286,8 +404,12 @@ class PopupManager {
         },
         (res) => {
           if (res.success) {
-            this.toast("Saved! Reloading page…", "success");
-            setTimeout(() => chrome.tabs.reload(this.currentTab.id), 700);
+            this.toast("Saved! Applying changes…", "success");
+            // Send message to content script to apply immediately
+            chrome.tabs.sendMessage(this.currentTab.id, {
+              action: "applyHiddenSettings",
+              settings: { enabled, selectors }
+            });
           }
         },
       );
@@ -319,8 +441,12 @@ class PopupManager {
         },
         (res) => {
           if (res.success) {
-            this.toast("Saved! Reloading page…", "success");
-            setTimeout(() => chrome.tabs.reload(this.currentTab.id), 700);
+            this.toast("Saved! Applying changes…", "success");
+            // Send message to content script to apply immediately
+            chrome.tabs.sendMessage(this.currentTab.id, {
+              action: "applyAutoScrollSettings",
+              settings: { enabled }
+            });
           }
         },
       );
@@ -379,9 +505,9 @@ function updateButtonText() {
   const saveBtn = document.getElementById("saveHideBtn");
   if (window._pm && saveBtn) {
     if (window._pm.activeTab === "autoscroll") {
-      saveBtn.innerHTML = " Save & Reload";
+      saveBtn.innerHTML = "💾 Save";
     } else if (window._pm.activeTab === "hide") {
-      saveBtn.innerHTML = " Save & Reload";
+      saveBtn.innerHTML = "💾 Save";
     }
   }
 }

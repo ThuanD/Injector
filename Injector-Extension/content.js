@@ -66,6 +66,14 @@ class ScriptRunner {
         case "saveAutoScrollSettings":
           this.saveAutoScrollSettings(message.hostname, message.settings, sendResponse);
           break;
+        case "applyAutoScrollSettings":
+          this.applyAutoScrollSettings(message.settings);
+          sendResponse({ success: true });
+          break;
+        case "applyHiddenSettings":
+          this.applyHiddenStyles(message.settings);
+          sendResponse({ success: true });
+          break;
 
         default:
           sendResponse({ error: "Unknown action" });
