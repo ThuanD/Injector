@@ -304,6 +304,25 @@ class AutoScroller {
   }
 
   startSmooth() {
+    // Wait for page to be ready
+    if (document.readyState !== 'complete') {
+      setTimeout(() => this.startSmooth(), 500);
+      return;
+    }
+    
+    // Debug page dimensions
+    const pageHeight = document.documentElement.scrollHeight;
+    const viewportHeight = window.innerHeight;
+    const maxScroll = pageHeight - viewportHeight;
+    
+    
+    if (maxScroll <= 0) {
+      return;
+    }
+    
+    // Add visual indicator
+    this.addScrollIndicator();
+
     const scroll = () => {
       if (!this.running) return;
 
@@ -312,9 +331,10 @@ class AutoScroller {
       this.lastTime = now;
 
       const scrollAmount = this.speed * delta;
-      const currentScroll = window.pageYOffset;
-      const maxScroll =
-        document.documentElement.scrollHeight - window.innerHeight;
+      
+      // Use multiple scroll position methods for better compatibility
+      const currentScroll = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      const currentMaxScroll = document.documentElement.scrollHeight - window.innerHeight;
 
       let newScroll =
         this.dir === "down"
@@ -322,10 +342,14 @@ class AutoScroller {
           : currentScroll - scrollAmount;
 
       // Handle boundaries
-      if (this.dir === "down" && newScroll >= maxScroll) {
-        newScroll = this.mode === "loop" ? 0 : maxScroll;
+      if (this.dir === "down" && newScroll >= currentMaxScroll) {
+        newScroll = this.mode === "loop" ? 0 : currentMaxScroll;
       } else if (this.dir === "up" && newScroll <= 0) {
-        newScroll = this.mode === "loop" ? maxScroll : 0;
+        newScroll = this.mode === "loop" ? currentMaxScroll : 0;
+      }
+
+      // Debug logging
+      if (Math.random() < 0.02) { // Log 2% of time to avoid spam
       }
 
       window.scrollTo(0, newScroll);
@@ -395,15 +419,81 @@ class AutoScroller {
       clearInterval(this.stepInterval);
       this.stepInterval = null;
     }
+    
+    // Remove visual indicator
+    const indicator = document.getElementById('injector-autoscroll-indicator');
+    if (indicator) {
+      indicator.remove();
+      console.log('[AutoScroll] Visual indicator removed');
+    }
   }
 
   getProgress() {
-    const currentScroll = window.pageYOffset;
+    const currentScroll = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
     const maxScroll =
       document.documentElement.scrollHeight - window.innerHeight;
     return maxScroll > 0 ? Math.round((currentScroll / maxScroll) * 100) : 0;
   }
-}
+
+  addScrollIndicator() {
+    // Remove existing indicators
+    const existing = document.getElementById('injector-autoscroll-indicator');
+    if (existing) existing.remove();
+    
+    const existingMouse = document.getElementById('injector-mouse-indicator');
+    if (existingMouse) existingMouse.remove();
+
+    // Create floating scroll indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'injector-autoscroll-indicator';
+    indicator.style.cssText = `
+      position: fixed; top: 50%; right: 20px; z-index: 999999;
+      transform: translateY(-50%);
+      background: #1a1a1a; border: 2px solid #3dd6f5; border-radius: 50%;
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 16px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+    `;
+    indicator.innerHTML = this.dir === 'down' ? '↓' : '↑';
+    indicator.title = 'Auto-scrolling (' + this.mode + ') - Click to stop';
+    
+    // Create mouse position indicator (center screen)
+    const mouseIndicator = document.createElement('div');
+    mouseIndicator.id = 'injector-mouse-indicator';
+    mouseIndicator.style.cssText = `
+      position: fixed; top: 50%; left: 50%; z-index: 999998;
+      transform: translate(-50%, -50%);
+      width: 20px; height: 20px; border: 2px solid #ff5a71; border-radius: 50%;
+      background: rgba(255, 90, 113, 0.1); pointer-events: none;
+      animation: pulse 2s infinite;
+    `;
+    mouseIndicator.innerHTML = '';
+    mouseIndicator.title = 'Scroll center point';
+    
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Click to stop
+    indicator.addEventListener('click', () => {
+      this.stop();
+      indicator.remove();
+      mouseIndicator.remove();
+    });
+    
+    document.body.appendChild(indicator);
+    document.body.appendChild(mouseIndicator);
+    console.log('[AutoScroll] Visual indicators added');
+  }
+
+  }
 
 // ==================== INITIALIZATION ====================
 
