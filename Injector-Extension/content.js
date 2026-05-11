@@ -246,10 +246,7 @@ class ScriptRunner {
       .split(",")
       .map((s) => {
         s = s.trim();
-        if (!s) return null;
-        if (s.startsWith(".") || s.startsWith("#") || s.startsWith("["))
-          return s;
-        return "." + s.split(/\s+/).join(".");
+        return s || null;
       })
       .filter(Boolean)
       .join(", ");
