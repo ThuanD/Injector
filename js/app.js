@@ -434,15 +434,20 @@
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const el = entry.target;
-          const text = el.textContent;
-          if (text === "20+") {
+          const text = el.textContent.trim();
+          // Animate plain integers (e.g. "27", "9"); skip "MV3", "v2.0"
+          if (/^\d+$/.test(text)) {
+            const target = parseInt(text, 10);
             gsap.from(el, {
               textContent: 0,
-              duration: 1.5,
+              duration: 1.4,
               ease: "power2.out",
               snap: { textContent: 1 },
               onUpdate: function () {
-                el.textContent = Math.ceil(this.targets()[0].textContent) + "+";
+                el.textContent = Math.ceil(this.targets()[0].textContent);
+              },
+              onComplete: () => {
+                el.textContent = target;
               },
             });
           }
@@ -453,6 +458,33 @@
     { threshold: 0.5 }
   );
   statNumbers.forEach((n) => statsObserver.observe(n));
+})();
+
+// ── MOBILE NAV TOGGLE ──────────────────────────────────
+(function () {
+  const btn = document.getElementById("navToggle");
+  const links = document.getElementById("navLinks");
+  if (!btn || !links) return;
+
+  const close = () => {
+    links.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  };
+
+  btn.addEventListener("click", () => {
+    const open = links.classList.toggle("open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  // close menu after clicking a link
+  links.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", close);
+  });
+
+  // close when resizing to desktop
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768) close();
+  });
 })();
 
 // ── CUSTOM CURSOR GLOW ─────────────────────────────────

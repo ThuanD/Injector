@@ -792,6 +792,9 @@ Return to me a complete code block without detailed explanations.`,
   /* ── URL PARAMS ── */
   checkUrlParams() {
     const p = new URLSearchParams(location.search);
+    if (p.has('tab')) {
+      this.goTo(p.get('tab'));
+    }
     if (p.has('edit')) {
       const id = p.get('edit');
       setTimeout(() => { if (this.scripts[id]) this.openModal(id); }, 300);
