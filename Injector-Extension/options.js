@@ -38,7 +38,6 @@ class OptionsManager {
   }
 
   setupToolbar() {
-    document.getElementById('addScriptBtn').addEventListener('click', () => this.openModal());
     document.getElementById('topAddBtn').addEventListener('click', () => this.openModal());
     document.getElementById('exportBtn').addEventListener('click', () => this.exportScripts());
     document.getElementById('importBtn').addEventListener('click', () => this.importScripts());
