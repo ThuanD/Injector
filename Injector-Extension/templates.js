@@ -1273,6 +1273,7 @@ const SCRIPT_TEMPLATES = {
     description:
       "Export cookies + localStorage of current page as code to share with others (no password sharing needed).",
     category: "🔑 Session Sharing",
+    verified: true,
     code: `(function sessionExport() {
   const domain = location.hostname;
 
@@ -1405,8 +1406,9 @@ const SCRIPT_TEMPLATES = {
   sessionImport: {
     name: "Session Importer",
     description:
-      "Import session code exported from Script Exporter to login to account without password.",
+      "Import session code exported from Session Exporter to log into an account without typing the password.",
     category: "🔑 Session Sharing",
+    verified: true,
     code: `(function sessionImport() {
   const domain = location.hostname;
 

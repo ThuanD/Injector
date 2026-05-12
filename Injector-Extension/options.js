@@ -108,13 +108,16 @@ class OptionsManager {
     const entries = Object.entries(this.filtered);
 
     if (entries.length === 0) {
+      const noScriptsAtAll = Object.keys(this.scripts).length === 0;
       grid.innerHTML = `
         <div style="grid-column:1/-1">
           <div class="empty-state">
-            <div class="empty-icon">${Object.keys(this.scripts).length === 0 ? '📭' : '🔍'}</div>
-            <div class="empty-title">${Object.keys(this.scripts).length === 0 ? 'No scripts yet' : 'No results'}</div>
-            <div class="empty-desc">${Object.keys(this.scripts).length === 0
-              ? 'Create your first script or pick a template to get started.'
+            <div class="empty-icon">${noScriptsAtAll ? '📭' : '🔍'}</div>
+            <div class="empty-title">${noScriptsAtAll ? 'No scripts yet' : 'No results'}</div>
+            <div class="empty-desc">${noScriptsAtAll
+              ? `Pick a template, write a script, or use the built-in tools — open the popup and switch to the
+                 <strong style="color:var(--text)">Hide</strong> or
+                 <strong style="color:var(--text)">Scroll</strong> tab for one-click solutions that need no script at all.`
               : 'Try a different search query or filter.'
             }</div>
           </div>
@@ -143,7 +146,7 @@ class OptionsManager {
       <div class="sc-top">
         <div class="sc-dot ${enabled ? '' : 'off'}"></div>
         <div class="sc-name" title="${this.esc(script.name)}">${this.esc(script.name)}</div>
-        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="${enabled ? 'Auto-run' : 'Manual'}">
+        <input type="checkbox" class="sc-toggle" ${enabled ? 'checked' : ''} title="${enabled ? 'Active' : 'Disabled'}">
       </div>
       <div class="sc-pattern" title="${this.esc(script.pattern || id)}">${this.esc(script.pattern || id)}</div>
       <div class="sc-desc">${this.esc(script.description || 'No description')}</div>
@@ -271,8 +274,8 @@ class OptionsManager {
             <div class="code-warning-icon">⚠️</div>
             <div class="code-warning-text">
               <strong>Only paste code from trusted sources.</strong>
-              This script can read all data on the page â including passwords and cookies.
-              Not sure what this code does? <a href="#" onclick="document.querySelector('[data-page=\'guide\']').click();return false">Learn more â</a>
+              This script can read all data on the page — including passwords and cookies.
+              Not sure what this code does? <a href="#" onclick="document.querySelector('[data-page=\'guide\']').click();return false">Learn more →</a>
             </div>
           </div>
           <textarea id="f-code" class="form-textarea code" placeholder="// Your JavaScript code here…">${this.esc(s?.code || '')}</textarea>
@@ -349,7 +352,9 @@ class OptionsManager {
         </div>
         <label class="confirm-row" id="secConfirmRow">
           <input type="checkbox" id="secConfirm">
-          <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong> <span style="color:var(--success);font-size:11px">(template has been reviewed ✓)</span></span>
+          <span class="confirm-row-label">I understand this script will run on the specified website and <strong>I trust this code is safe</strong>${tpl.verified
+            ? ' <span style="color:var(--success);font-size:11px">(✓ verified — individually tested)</span>'
+            : ' <span style="color:var(--warn);font-size:11px">(curated, but not individually QA-tested — read the code first)</span>'}</span>
         </label>
       </div>
       <div class="modal-actions">
@@ -551,9 +556,13 @@ class OptionsManager {
         return this.esc(text).replace(regex, '<mark style="background:rgba(61,214,245,.2);color:var(--accent);border-radius:2px;padding:0 1px">$1</mark>');
       };
 
+      const verifiedBadge = tpl.verified
+        ? '<span class="tpl-verified-badge" title="Tested and confirmed working">✓ Verified</span>'
+        : '';
       card.innerHTML = `
-        <div class="sc-top" style="margin-bottom:8px">
+        <div class="sc-top" style="margin-bottom:8px;gap:6px;flex-wrap:wrap">
           <span class="tpl-cat">${this.esc(tpl.category)}</span>
+          ${verifiedBadge}
         </div>
         <div class="sc-name" style="margin-bottom:6px;font-size:14px">${highlight(tpl.name)}</div>
         <div class="sc-desc" style="margin-bottom:12px;-webkit-line-clamp:3">${highlight(tpl.description)}</div>
