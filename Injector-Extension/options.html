@@ -464,7 +464,7 @@
               <div class="step-title">Hide tab — block ads, cookie banners, or any element</div>
               <div class="step-desc">
                 Click the chips <code>🧹 Ads</code> / <code>🍪 Cookies</code> / <code>📧 Newsletter</code> for curated
-                presets, or <code>🖼 iframe</code> / <code>🎬 video</code> / <code>🔗 a</code> to hide by tag.
+                presets, or <code>🖼 iframe</code> / <code>🎬 video</code> / <code>🔗 a</code> / <code>🖼 img</code> to hide by tag.
                 You can also type any CSS selector. Settings save per site automatically.
               </div>
             </div>
@@ -475,8 +475,10 @@
               <div class="step-title">Scroll tab — auto-scroll long pages</div>
               <div class="step-desc">
                 Pick a mode (<code>Smooth</code>, <code>Step</code>, or <code>Loop</code>), set speed and direction, toggle
-                <strong style="color:var(--text)">Enable</strong>. A floating panel appears on the page with ▶/⏸ controls and
-                keyboard shortcuts (<code>ESC</code> stop, <code>R</code> reset).
+                <strong style="color:var(--text)">Enable</strong>. A floating panel appears at the
+                <strong style="color:var(--text)">bottom-right of the page</strong>:
+                <code>▶/⏸</code> to start or pause, and <code>⚙</code> to tweak direction, mode, and speed
+                live without reopening the extension popup. Keyboard shortcuts also work (<code>ESC</code> stop, <code>R</code> reset).
               </div>
             </div>
           </div>
@@ -492,23 +494,23 @@
             <div class="step-body">
               <div class="step-title">Go to Templates Page</div>
               <div class="step-desc">Click <strong style="color:var(--text)">📋 Templates</strong> in the left sidebar. You'll see a list of ready-to-use scripts grouped by function.</div>
+              <div class="step-action">
+                <button class="step-btn" onclick="document.querySelector('[data-page=\'templates\']').click()">📋 Go to Templates →</button>
+              </div>
             </div>
           </div>
           <div class="step">
             <div class="step-num">2</div>
             <div class="step-body">
-              <div class="step-title">Preview and Select Template</div>
-              <div class="step-desc">Press <strong style="color:var(--text)">👁 (preview)</strong> to view code, or press <strong style="color:var(--text)">＋ Use Template</strong> to use immediately. No need to understand the code.</div>
+              <div class="step-title">Preview, then Use Template</div>
+              <div class="step-desc">Press <strong style="color:var(--text)">👁</strong> to peek at the code first (optional), then press <strong style="color:var(--text)">＋ Use Template</strong>. The script editor opens with the code already pre-filled — no need to understand it.</div>
             </div>
           </div>
           <div class="step">
             <div class="step-num">3</div>
             <div class="step-body">
               <div class="step-title">Fill URL Pattern and Save</div>
-              <div class="step-desc">Only need to fill one thing: <strong style="color:var(--text)">URL Pattern</strong> — which pages you want this script to run on. Example: <code>*.amazon.com</code> or <code>*.youtube.com</code>. Press <strong style="color:var(--text)">＋ Add Script</strong> and you're done.</div>
-              <div class="step-action">
-                <button class="step-btn" onclick="document.querySelector('[data-page=\'templates\']').click()">📋 Go to Templates →</button>
-              </div>
+              <div class="step-desc">In the editor that just opened, the only field you need to fill is <strong style="color:var(--text)">URL Pattern</strong> — which pages this script should run on. Example: <code>*.amazon.com</code> or <code>*.youtube.com</code>. Press <strong style="color:var(--text)">＋ Add Script</strong> and you're done.</div>
             </div>
           </div>
         </div>
@@ -604,6 +606,10 @@
           <div class="tip-box">
             <div class="tip-box-icon">🧪</div>
             <div><strong>Quick test without reload:</strong> Open extension popup → find script → press <strong>▶ Run</strong> to test immediately without reloading the page.</div>
+          </div>
+          <div class="tip-box">
+            <div class="tip-box-icon">🛠️</div>
+            <div><strong>Manage scripts later:</strong> Every script you save appears as a card on the <strong>All Scripts</strong> page. Use the toggle to enable/disable instantly, <strong>✏ Edit</strong> to change URL pattern or code, <strong>👁 View</strong> for a read-only look, <strong>⧉ Dup</strong> to duplicate, or <strong>🗑</strong> to delete.</div>
           </div>
           <div class="tip-box">
             <div class="tip-box-icon">📦</div>

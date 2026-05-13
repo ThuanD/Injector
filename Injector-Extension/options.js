@@ -744,8 +744,8 @@ Requirements:
       },
       {
         label: 'General',
-        title: 'Free description in Vietnamese',
-        preview: 'Use when you know what you want but don\'t know which prompt to use...',
+        title: 'Custom request — describe anything',
+        preview: 'Use when you know what you want but none of the other prompts fits...',
         prompt: `I want to create a JavaScript script that runs automatically on [WEBSITE NAME].
 
 Goal: [DESCRIBE WHAT YOU WANT THE SCRIPT TO DO IN DETAIL - be as specific as possible, in English]
