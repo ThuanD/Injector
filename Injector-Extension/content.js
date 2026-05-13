@@ -413,7 +413,17 @@ class ScriptRunner {
     `;
     settingsBtn.innerHTML = `<span style="font-size: 16px;">⚙</span>`;
     settingsBtn.title = "Auto-Scroll Settings";
-    settingsBtn.addEventListener("click", () => this.showSettingsPopup());
+    settingsBtn.addEventListener("click", (e) => {
+      // Stop propagation so the popup's own outside-click handler can't fire
+      // on the same click that opened it. Toggle so a second gear-click
+      // closes — easier than hunting for an empty patch of page.
+      e.stopPropagation();
+      if (document.getElementById("injector-autoscroll-settings-panel")) {
+        this.hideSettingsPopup();
+      } else {
+        this.showSettingsPopup();
+      }
+    });
 
     // Add ripple effect
     const createRipple = (btn, e) => {
@@ -551,7 +561,7 @@ class ScriptRunner {
 
     // Create popup — matches the extension popup's dark surface and brand accents
     const popup = document.createElement("div");
-    popup.id = "injector-autoscroll-settings-popup";
+    popup.id = "injector-autoscroll-settings-panel";
     popup.style.cssText = `
       position: fixed; bottom: 80px; right: 20px; z-index: 1000000;
       background: #0c0e14;
@@ -737,7 +747,7 @@ class ScriptRunner {
     // Add slider styling
     const style = document.createElement('style');
     style.textContent = `
-      #injector-autoscroll-settings-popup input[type="range"]::-webkit-slider-thumb {
+      #injector-autoscroll-settings-panel input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 14px;
@@ -748,11 +758,11 @@ class ScriptRunner {
         box-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
         transition: box-shadow 0.18s, transform 0.18s;
       }
-      #injector-autoscroll-settings-popup input[type="range"]::-webkit-slider-thumb:hover {
+      #injector-autoscroll-settings-panel input[type="range"]::-webkit-slider-thumb:hover {
         box-shadow: 0 0 12px rgba(245, 166, 35, 0.8);
         transform: scale(1.1);
       }
-      #injector-autoscroll-settings-popup input[type="range"]::-moz-range-thumb {
+      #injector-autoscroll-settings-panel input[type="range"]::-moz-range-thumb {
         width: 14px;
         height: 14px;
         background: #f5a623;
@@ -761,18 +771,18 @@ class ScriptRunner {
         border: none;
         box-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
       }
-      #injector-autoscroll-settings-popup #step-slider::-webkit-slider-thumb {
+      #injector-autoscroll-settings-panel #step-slider::-webkit-slider-thumb {
         background: #7c6cf8;
         box-shadow: 0 0 8px rgba(124, 108, 248, 0.5);
       }
-      #injector-autoscroll-settings-popup #step-slider::-webkit-slider-thumb:hover {
+      #injector-autoscroll-settings-panel #step-slider::-webkit-slider-thumb:hover {
         box-shadow: 0 0 12px rgba(124, 108, 248, 0.8);
       }
-      #injector-autoscroll-settings-popup #step-slider::-moz-range-thumb {
+      #injector-autoscroll-settings-panel #step-slider::-moz-range-thumb {
         background: #7c6cf8;
         box-shadow: 0 0 8px rgba(124, 108, 248, 0.5);
       }
-      #injector-autoscroll-settings-popup #close-settings:hover {
+      #injector-autoscroll-settings-panel #close-settings:hover {
         border-color: rgba(61, 214, 245, 0.4);
         color: #3dd6f5;
         background: rgba(61, 214, 245, 0.05);
@@ -784,20 +794,27 @@ class ScriptRunner {
       this.hideSettingsPopup();
     });
 
-    // Close popup when clicking outside
-    const closeHandler = (e) => {
-      if (!popup.contains(e.target)) {
-        this.hideSettingsPopup();
-        document.removeEventListener("click", closeHandler);
-      }
+    // Close popup when clicking outside. Use `mousedown` (fires before click)
+    // and check against both the popup and the gear button, so the gear's
+    // own click can still toggle the popup closed without this handler
+    // racing it. Handler is stored on `this` so hideSettingsPopup() can
+    // always tear it down, regardless of how the popup is dismissed.
+    this._asCloseHandler = (e) => {
+      if (popup.contains(e.target)) return;
+      if (e.target.closest && e.target.closest("#injector-autoscroll-settings")) return;
+      this.hideSettingsPopup();
     };
-    setTimeout(() => document.addEventListener("click", closeHandler), 100);
+    document.addEventListener("mousedown", this._asCloseHandler);
   }
 
   hideSettingsPopup() {
-    const popup = document.getElementById("injector-autoscroll-settings-popup");
+    const popup = document.getElementById("injector-autoscroll-settings-panel");
     if (popup) {
       popup.remove();
+    }
+    if (this._asCloseHandler) {
+      document.removeEventListener("mousedown", this._asCloseHandler);
+      this._asCloseHandler = null;
     }
   }
 
