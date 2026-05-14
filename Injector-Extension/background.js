@@ -281,9 +281,11 @@ class BackgroundScriptManager {
       });
 
       this.addLog(`Executed: ${scriptId}`, "execute", "success");
+      this.recordLastRun(scriptId, "success");
       sendResponse({ success: true });
     } catch (error) {
       this.addLog(`Failed: ${scriptId}`, "execute", "error");
+      this.recordLastRun(scriptId, "error", error.message);
       sendResponse({ error: error.message });
     }
   }
@@ -474,10 +476,42 @@ class BackgroundScriptManager {
         "execute",
         "success",
       );
+      this.recordLastRun(scriptId, "success");
       sendResponse({ success: true });
     } catch (error) {
       this.addLog(`Failed: ${scriptId}`, "execute", "error");
+      this.recordLastRun(scriptId, "error", error.message);
       sendResponse({ error: error.message });
+    }
+  }
+
+  /**
+   * Persist last-run metadata for a script so the popup can show
+   * a freshness indicator ("ran 5s ago ✓" or "errored ⚠").
+   *
+   * Stored as { [scriptId]: { at, status, error? } } in chrome.storage.local
+   * under key "lastRun". Capped at 200 entries to avoid unbounded growth.
+   */
+  async recordLastRun(scriptId, status, error) {
+    if (!scriptId) return;
+    try {
+      const { lastRun } = await chrome.storage.local.get("lastRun");
+      const map = lastRun || {};
+      map[scriptId] = {
+        at: Date.now(),
+        status,
+        ...(error ? { error: String(error).slice(0, 200) } : {}),
+      };
+      const keys = Object.keys(map);
+      if (keys.length > 200) {
+        keys
+          .sort((a, b) => map[a].at - map[b].at)
+          .slice(0, keys.length - 200)
+          .forEach((k) => delete map[k]);
+      }
+      await chrome.storage.local.set({ lastRun: map });
+    } catch (e) {
+      console.warn("recordLastRun failed:", e);
     }
   }
 

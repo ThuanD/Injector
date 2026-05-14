@@ -76,12 +76,15 @@
     />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <!-- THREE.JS CANVAS -->
+    <canvas id="three-canvas"></canvas>
     <!-- NAV -->
     <nav>
       <a class="nav-brand" href="#">
@@ -89,7 +92,7 @@
         <div class="nav-name">In<span>jector</span></div>
         <div class="nav-ver">v2.0</div>
       </a>
-      <ul class="nav-links">
+      <ul class="nav-links" id="navLinks">
         <li><a href="#features">Features</a></li>
         <li><a href="#templates">Templates</a></li>
         <li><a href="#install">Install</a></li>
@@ -98,28 +101,7 @@
           <a
             href="https://www.buymeacoffee.com/thuandv"
             target="_blank"
-            style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              padding: 7px 14px;
-              border: 1px solid rgba(245, 166, 35, 0.3);
-              border-radius: 8px;
-              color: var(--warn);
-              font-size: 13px;
-              font-weight: 600;
-              transition: all 0.2s;
-              text-decoration: none;
-              background: rgba(245, 166, 35, 0.06);
-            "
-            onmouseover="
-              this.style.background = 'rgba(245,166,35,.12)';
-              this.style.borderColor = 'rgba(245,166,35,.5)';
-            "
-            onmouseout="
-              this.style.background = 'rgba(245,166,35,.06)';
-              this.style.borderColor = 'rgba(245,166,35,.3)';
-            "
+            class="nav-coffee"
           >
             🍭 Buy me a Chupa Chups
           </a>
@@ -133,6 +115,17 @@
           >
         </li>
       </ul>
+
+      <button
+        class="nav-toggle"
+        id="navToggle"
+        aria-label="Toggle navigation menu"
+        aria-expanded="false"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </nav>
 
     <!-- HERO -->
@@ -143,18 +136,19 @@
 
       <div class="hero-badge">
         <div class="dot"></div>
-        Free · No Account Required · Open Source
+        Open Source · No Account · No Chrome Store Fee
       </div>
 
       <h1>
-        Take control<br />
-        <span class="line2">of any website.</span>
+        25 scripts ready.<br />
+        <span class="line2">Zero coding.</span>
       </h1>
 
       <p class="hero-sub">
-        Chrome extension that automatically runs JavaScript on any website you want.
-        Hide ads, auto-fill forms, track prices, get Telegram notifications —
-        <strong>no programming required.</strong>
+        A Chrome extension with <strong>25 curated scripts</strong> — force dark mode,
+        monitor prices to Telegram, share login sessions. Plus built-in Hide-Elements
+        (with ad-blocker preset) and Auto-Scroll (with on-page speed/mode controls) —
+        features Tampermonkey doesn't have. <strong>Install, click, done.</strong>
       </p>
 
       <div class="hero-btns">
@@ -164,25 +158,89 @@
         >
           ↓ Download Free
         </a>
-        <a href="#install" class="btn-secondary"> 📖 Installation Guide </a>
+        <a href="#templates" class="btn-secondary"> 👁 See what it does </a>
       </div>
 
       <div class="hero-stats">
         <div class="stat">
-          <div class="stat-n">20+</div>
+          <div class="stat-n">25</div>
           <div class="stat-l">Ready Templates</div>
         </div>
         <div class="stat">
-          <div class="stat-n">0đ</div>
-          <div class="stat-l">Completely Free</div>
+          <div class="stat-n">9</div>
+          <div class="stat-l">Categories</div>
         </div>
         <div class="stat">
           <div class="stat-n">MV3</div>
-          <div class="stat-l">Manifest V3 Compliant</div>
+          <div class="stat-l">Manifest V3</div>
         </div>
         <div class="stat">
-          <div class="stat-n">∞</div>
-          <div class="stat-l">Unlimited Scripts</div>
+          <div class="stat-n">v2.0</div>
+          <div class="stat-l">Latest Release</div>
+        </div>
+      </div>
+
+      <!-- PRODUCT MOCK -->
+      <div class="hero-showcase reveal">
+        <div class="mock-popup" aria-hidden="true">
+          <div class="mock-header">
+            <div class="mock-logo">
+              <div class="mock-logo-icon">⚡</div>
+              <div class="mock-logo-text">In<span>jector</span></div>
+            </div>
+            <div class="mock-icon-row">
+              <div class="mock-icon-btn">↻</div>
+              <div class="mock-icon-btn">⚙</div>
+            </div>
+          </div>
+          <div class="mock-sitebar">
+            <span class="mock-site-dot"></span>
+            <span class="mock-site-url"><strong>youtube.com</strong>/watch</span>
+            <span class="mock-site-badge">3 scripts</span>
+          </div>
+          <div class="mock-tabs">
+            <div class="mock-tab active">⚡ Scripts <span class="mock-tab-badge">3</span></div>
+            <div class="mock-tab">🚫 Hide</div>
+            <div class="mock-tab">🔄 Scroll</div>
+          </div>
+          <div class="mock-scripts">
+            <div class="mock-card">
+              <div class="mock-card-top">
+                <span class="mock-status"></span>
+                <span class="mock-name">Clean YouTube UI</span>
+                <span class="mock-toggle on"></span>
+              </div>
+              <div class="mock-desc">Hide Shorts, sidebar, recommendations</div>
+            </div>
+            <div class="mock-card">
+              <div class="mock-card-top">
+                <span class="mock-status"></span>
+                <span class="mock-name">Remove Ads & Banners</span>
+                <span class="mock-toggle on"></span>
+              </div>
+              <div class="mock-desc">Auto-strip ad containers on load</div>
+            </div>
+            <div class="mock-card dim">
+              <div class="mock-card-top">
+                <span class="mock-status off"></span>
+                <span class="mock-name">Force Dark Mode</span>
+                <span class="mock-toggle"></span>
+              </div>
+              <div class="mock-desc">CSS invert for sites without dark mode</div>
+            </div>
+          </div>
+          <div class="mock-bottom">
+            <div class="mock-bottom-btn">⚙ Manage</div>
+            <div class="mock-bottom-btn primary">＋ Add</div>
+          </div>
+        </div>
+        <div class="mock-caption">
+          <div class="mock-caption-tag">↑ This is the popup</div>
+          <div class="mock-caption-title">One click on the ⚡ icon.<br/>Everything visible.</div>
+          <div class="mock-caption-text">
+            Toggle scripts on or off per site. Hide any element with a CSS selector — no script needed.
+            Start auto-scroll for endless feeds. Run a script manually with one tap.
+          </div>
         </div>
       </div>
     </section>
@@ -254,39 +312,252 @@
     <section id="templates" style="background: var(--bg)">
       <div class="reveal">
         <div class="section-tag">Templates</div>
-        <div class="section-title">Install and use immediately.</div>
+        <div class="section-title">25 scripts ready.<br />No coding needed.</div>
         <div class="section-sub">
-          Over 20 pre-written scripts, clearly categorized. Click to select, enter URL, save —
-          done.
+          The 8 below cover the most-common needs — Session Exporter / Importer are
+          <span style="color: var(--success); font-weight: 600">✓ Verified</span>,
+          Hide Elements and Auto-Scroll are
+          <span style="color: var(--warn); font-weight: 600">⚡ Built-in</span> to
+          the extension. Expand for 17 more bundled templates.
         </div>
       </div>
 
-      <div class="templates-row reveal">
-        <div class="tpl-pill">🧹 Ad remover</div>
-        <div class="tpl-pill">🚫 Popup blocker</div>
-        <div class="tpl-pill">🔓 Paywall remover</div>
-        <div class="tpl-pill">📜 Sticky header killer</div>
-        <div class="tpl-pill">🎬 YouTube cleaner</div>
-        <div class="tpl-pill">📖 Focus reading mode</div>
-        <div class="tpl-pill">✍️ Auto form filler</div>
-        <div class="tpl-pill">📋 Auto table of contents</div>
-        <div class="tpl-pill">⏱️ Reading time</div>
-        <div class="tpl-pill">🌙 Force dark mode</div>
-        <div class="tpl-pill">🔤 Custom font</div>
-        <div class="tpl-pill">🔍 Element inspector</div>
-        <div class="tpl-pill">📐 CSS grid overlay</div>
-        <div class="tpl-pill">🗄 Storage viewer</div>
-        <div class="tpl-pill">📊 SEO meta info</div>
-        <div class="tpl-pill">📈 Scroll tracker</div>
-        <div class="tpl-pill">💰 Price monitor</div>
-        <div class="tpl-pill">👁 Text change monitor</div>
-        <div class="tpl-pill">🎟 Coupon finder</div>
-        <div class="tpl-pill">♾ Auto scroll</div>
-        <div class="tpl-pill">🔗 Copy all links</div>
-        <div class="tpl-pill">🖼 Download images</div>
-        <div class="tpl-pill">🐦 Clean Twitter/X</div>
-        <div class="tpl-pill">📘 Clean Facebook</div>
-        <div class="tpl-pill">🔑 Session exporter</div>
+      <div class="tpl-grid reveal">
+        <!-- 1. Hide Elements (built-in feature, not a template) -->
+        <article class="tpl-card tpl-builtin">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(255, 90, 113, 0.1); color: var(--danger)">🚫</div>
+            <div class="tpl-cat">
+              <span class="tpl-builtin-badge" title="Built into the extension, no script needed">⚡ Built-in</span>
+              DOM Cleanup
+            </div>
+          </div>
+          <h3 class="tpl-title">Hide Elements (+ Presets)</h3>
+          <p class="tpl-desc">Type any CSS selector — class, id, attribute, or tag like <code>iframe</code>/<code>video</code>. One-click presets for ads, cookie banners, newsletters.</p>
+          <div class="tpl-preview preview-hide" aria-hidden="true">
+            <div class="prev-hide-chips">
+              <span class="prev-hide-chip">🖼 iframe</span>
+              <span class="prev-hide-chip">🎬 video</span>
+              <span class="prev-hide-chip">🔗 a</span>
+              <span class="prev-hide-chip preset">🧹 Ads preset</span>
+            </div>
+            <div class="prev-hide-textarea">
+              <span class="prev-hide-mono">iframe, video, [class*="ads-"], [data-ad]…</span>
+            </div>
+            <div class="prev-hide-status">
+              <span class="prev-hide-dot"></span> 27 elements hidden
+            </div>
+          </div>
+        </article>
+
+        <!-- 2. Force Dark Mode -->
+        <article class="tpl-card">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(124, 108, 248, 0.1); color: var(--accent2)">🌙</div>
+            <div class="tpl-cat">Styling</div>
+          </div>
+          <h3 class="tpl-title">Force Dark Mode</h3>
+          <p class="tpl-desc">CSS filter inversion for any site without native dark mode. Toggle per domain.</p>
+          <div class="tpl-preview preview-dark" aria-hidden="true">
+            <div class="prev-half-light">
+              <div class="prev-line dark"></div>
+              <div class="prev-line dark short"></div>
+              <div class="prev-line dark"></div>
+            </div>
+            <div class="prev-half-dark">
+              <div class="prev-line light"></div>
+              <div class="prev-line light short"></div>
+              <div class="prev-line light"></div>
+            </div>
+            <div class="prev-divider"></div>
+          </div>
+        </article>
+
+        <!-- 3. Clean YouTube -->
+        <article class="tpl-card">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(255, 90, 113, 0.1); color: var(--danger)">🎬</div>
+            <div class="tpl-cat">DOM Cleanup</div>
+          </div>
+          <h3 class="tpl-title">Clean YouTube UI</h3>
+          <p class="tpl-desc">Hide Shorts, sidebar suggestions, end-screens, and comments on YouTube watch pages.</p>
+          <div class="tpl-preview preview-yt" aria-hidden="true">
+            <div class="prev-yt-main"></div>
+            <div class="prev-yt-side">
+              <div class="prev-yt-item killed"><span class="prev-x">×</span></div>
+              <div class="prev-yt-item killed"><span class="prev-x">×</span></div>
+              <div class="prev-yt-item killed"><span class="prev-x">×</span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4. Auto-Scroll (built-in feature) -->
+        <article class="tpl-card tpl-builtin">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(245, 166, 35, 0.1); color: var(--warn)">♾</div>
+            <div class="tpl-cat">
+              <span class="tpl-builtin-badge" title="Built into the extension, no script needed">⚡ Built-in</span>
+              Automation
+            </div>
+          </div>
+          <h3 class="tpl-title">Auto-Scroll Controls</h3>
+          <p class="tpl-desc">Toggle on, get a floating panel on the page: <code>Smooth</code> / <code>Step</code> / <code>Loop</code> modes, speed slider, ↑↓ direction. Reading-mode pause at bottom.</p>
+          <div class="tpl-preview preview-scroll" aria-hidden="true">
+            <div class="prev-as-panel">
+              <div class="prev-as-title">📜 Auto Scroll</div>
+              <div class="prev-as-modes">
+                <span class="prev-as-mode active">Smooth</span>
+                <span class="prev-as-mode">Step</span>
+                <span class="prev-as-mode">Loop</span>
+              </div>
+              <div class="prev-as-speed">
+                <span class="prev-as-speed-label">Speed</span>
+                <span class="prev-as-speed-val">120 <em>px/s</em></span>
+              </div>
+              <div class="prev-as-slider"><span class="prev-as-thumb"></span></div>
+            </div>
+            <div class="prev-scroll-arrow">↓</div>
+          </div>
+        </article>
+
+        <!-- 5. Generate TOC -->
+        <article class="tpl-card">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(61, 214, 245, 0.1); color: var(--accent)">📋</div>
+            <div class="tpl-cat">Productivity</div>
+          </div>
+          <h3 class="tpl-title">Generate Table of Contents</h3>
+          <p class="tpl-desc">Scan all headings on the page and build a floating sticky TOC sidebar.</p>
+          <div class="tpl-preview preview-toc" aria-hidden="true">
+            <div class="prev-toc-main">
+              <div class="prev-line"></div>
+              <div class="prev-line short"></div>
+              <div class="prev-line"></div>
+              <div class="prev-line"></div>
+            </div>
+            <div class="prev-toc-side">
+              <div class="prev-toc-h">§ Intro</div>
+              <div class="prev-toc-h sub">§ Setup</div>
+              <div class="prev-toc-h">§ Usage</div>
+              <div class="prev-toc-h sub">§ API</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6. Price Monitor -->
+        <article class="tpl-card">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(245, 166, 35, 0.1); color: var(--warn)">💰</div>
+            <div class="tpl-cat">Monitoring · Telegram</div>
+          </div>
+          <h3 class="tpl-title">Price Change Monitor</h3>
+          <p class="tpl-desc">Poll product price, send Telegram alert when it drops below your threshold.</p>
+          <div class="tpl-preview preview-price" aria-hidden="true">
+            <div class="prev-price-row">
+              <span class="prev-price-label">Was</span>
+              <span class="prev-price-old">$129</span>
+            </div>
+            <div class="prev-price-row">
+              <span class="prev-price-label">Now</span>
+              <span class="prev-price-new">$89 ↓</span>
+            </div>
+            <div class="prev-tg-alert">
+              <span class="prev-tg-icon">✈</span>
+              <span class="prev-tg-text">Telegram alert sent</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 7. Session Exporter (verified) -->
+        <article class="tpl-card tpl-verified">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(61, 214, 245, 0.1); color: var(--accent)">🔑</div>
+            <div class="tpl-cat">
+              <span class="tpl-verified-badge" title="Tested and confirmed working">✓ Verified</span>
+              Session Sharing
+            </div>
+          </div>
+          <h3 class="tpl-title">Session Exporter</h3>
+          <p class="tpl-desc">Capture cookies, localStorage and sessionStorage of any site as a shareable code — no password needed.</p>
+          <div class="tpl-preview preview-export" aria-hidden="true">
+            <div class="prev-export-src">
+              <span class="prev-chip cookie">🍪 cookies <em>14</em></span>
+              <span class="prev-chip storage">📦 localStorage <em>22</em></span>
+              <span class="prev-chip session">⚡ sessionStorage <em>3</em></span>
+            </div>
+            <div class="prev-export-arrow">→</div>
+            <div class="prev-export-out">
+              <span class="prev-export-label">SESSION-CODE</span>
+              <span class="prev-export-mono">eyJjb29raWVzIjp7…</span>
+              <span class="prev-export-copy">📋 Copied</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 8. Session Importer (verified) -->
+        <article class="tpl-card tpl-verified">
+          <div class="tpl-card-head">
+            <div class="tpl-icon" style="background: rgba(45, 212, 160, 0.1); color: var(--success)">📥</div>
+            <div class="tpl-cat">
+              <span class="tpl-verified-badge" title="Tested and confirmed working">✓ Verified</span>
+              Session Sharing
+            </div>
+          </div>
+          <h3 class="tpl-title">Session Importer</h3>
+          <p class="tpl-desc">Paste the exported code on another device — instantly logged in without typing the password.</p>
+          <div class="tpl-preview preview-import" aria-hidden="true">
+            <div class="prev-import-in">
+              <span class="prev-import-label">PASTE SESSION-CODE</span>
+              <span class="prev-import-mono">eyJjb29raWVzIjp7…</span>
+            </div>
+            <div class="prev-import-arrow">↓</div>
+            <div class="prev-import-result">
+              <span class="prev-import-check">✓</span>
+              <span class="prev-import-text">Logged in as <strong>you@example.com</strong></span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <details class="tpl-accordion reveal">
+        <summary>
+          <span class="tpl-accordion-label">Show 17 more templates</span>
+          <span class="tpl-accordion-chevron">▼</span>
+        </summary>
+        <div class="tpl-accordion-note">
+          These are bundled with the extension but haven't been individually QA-tested
+          yet — they may work fine, or may need tweaks. Reports welcome.
+        </div>
+        <div class="templates-row">
+          <div class="tpl-pill">🚫 Popup blocker</div>
+          <div class="tpl-pill">🔓 Paywall remover</div>
+          <div class="tpl-pill">📜 Sticky header killer</div>
+          <div class="tpl-pill">📖 Focus reading mode</div>
+          <div class="tpl-pill">✍️ Auto form filler</div>
+          <div class="tpl-pill">⏱️ Reading time</div>
+          <div class="tpl-pill">🔤 Custom font</div>
+          <div class="tpl-pill">🔎 Custom page zoom</div>
+          <div class="tpl-pill">🔍 Element inspector</div>
+          <div class="tpl-pill">📐 CSS grid overlay</div>
+          <div class="tpl-pill">🗄 Storage viewer</div>
+          <div class="tpl-pill">📊 SEO meta info</div>
+          <div class="tpl-pill">📈 Scroll tracker</div>
+          <div class="tpl-pill">👁 Text change monitor</div>
+          <div class="tpl-pill">🎟 Coupon finder</div>
+          <div class="tpl-pill">🔗 Copy all links</div>
+          <div class="tpl-pill">🖼 Download images</div>
+          <div class="tpl-pill">🐦 Clean Twitter/X</div>
+          <div class="tpl-pill">📘 Clean Facebook</div>
+        </div>
+      </details>
+
+      <div class="tpl-cta reveal">
+        <a
+          href="https://github.com/ThuanD/Injector/releases/latest/download/Injector-Extension.zip"
+          class="btn-primary"
+        >
+          ↓ Install to use these
+        </a>
       </div>
     </section>
 
@@ -539,7 +810,7 @@
         </div>
         <span
           style="
-            font-family: &quot;Syne&quot;, sans-serif;
+            font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
             font-size: 15px;
             font-weight: 700;
           "
@@ -554,38 +825,10 @@
       </div>
     </footer>
 
-    <script>
-      // Scroll reveal
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry, i) => {
-            if (entry.isIntersecting) {
-              setTimeout(() => entry.target.classList.add("visible"), i * 80);
-              observer.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.1 },
-      );
-
-      document
-        .querySelectorAll(".reveal")
-        .forEach((el) => observer.observe(el));
-
-      // Smooth active nav highlight
-      const sections = document.querySelectorAll("section[id]");
-      const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
-
-      window.addEventListener("scroll", () => {
-        let current = "";
-        sections.forEach((s) => {
-          if (window.scrollY >= s.offsetTop - 100) current = s.id;
-        });
-        navLinks.forEach((a) => {
-          a.style.color =
-            a.getAttribute("href") === `#${current}` ? "var(--accent)" : "";
-        });
-      });
-    </script>
+    <!-- CDN: Three.js + GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="js/app.js"></script>
   </body>
 </html>

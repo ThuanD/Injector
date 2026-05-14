@@ -9,6 +9,14 @@ class ScriptRunner {
     this.pendingExecutions = new Map();
     this.lastUrl = location.href;
     this.autoScroller = null;
+    // Persistent auto-scroll settings — survives settings-popup open/close and
+    // is used as the source of truth for Start, mode switches, and slider edits.
+    this.autoScrollSettings = {
+      dir: "down",
+      mode: "smooth",
+      speed: 120,
+      stepPx: 200,
+    };
     this.setupBridge();
     this.loadScripts();
     this.loadHiddenSettings();
@@ -109,13 +117,13 @@ class ScriptRunner {
         const scriptKey = `${id}::${currentUrl}`;
 
         if (!this.executedScripts.has(scriptKey)) {
-          this.scheduleExecution(scriptKey, script.code, pattern, script.name);
+          this.scheduleExecution(scriptKey, script.code, pattern, script.name, id);
         }
       }
     });
   }
 
-  scheduleExecution(scriptKey, code, pattern, name) {
+  scheduleExecution(scriptKey, code, pattern, name, id) {
     if (this.executedScripts.has(scriptKey)) return;
 
     // Clear pending if any
@@ -127,7 +135,7 @@ class ScriptRunner {
     const execute = () => {
       if (this.executedScripts.has(scriptKey)) return; // guard double-run
       this.executedScripts.add(scriptKey);
-      this.executeScript(code, pattern, name);
+      this.executeScript(code, pattern, name, id);
     };
 
     if (document.readyState === "loading") {
@@ -189,9 +197,9 @@ class ScriptRunner {
     }
   }
 
-  executeScript(code, pattern, name) {
+  executeScript(code, pattern, name, id) {
     chrome.runtime.sendMessage(
-      { action: "executeScriptInMainWorld", code, scriptId: name },
+      { action: "executeScriptInMainWorld", code, scriptId: id || name },
       (response) => {
         if (chrome.runtime.lastError) {
           console.error(
@@ -246,10 +254,7 @@ class ScriptRunner {
       .split(",")
       .map((s) => {
         s = s.trim();
-        if (!s) return null;
-        if (s.startsWith(".") || s.startsWith("#") || s.startsWith("["))
-          return s;
-        return "." + s.split(/\s+/).join(".");
+        return s || null;
       })
       .filter(Boolean)
       .join(", ");
@@ -304,12 +309,48 @@ class ScriptRunner {
     });
   }
 
+  /**
+   * React to a fresh auto-scroll settings payload from the popup. Accepts a
+   * full settings object — { enabled, mode, dir, speed, stepPx } — and:
+   *
+   *   - merges non-enabled fields into this.autoScrollSettings (used as
+   *     defaults for next start)
+   *   - propagates live changes into a running scroller via update() so a
+   *     mode/dir/speed change in the popup applies without user toggling off+on
+   *   - on enable=true: shows on-page controls AND auto-starts the scroller
+   *     so the user doesn't have to click the on-page ▶ as a second step
+   *   - on enable=false: stops + hides controls
+   */
   applyAutoScrollSettings(settings) {
+    if (!settings) return;
+
+    // Merge persisted fields (skip enabled — that one drives start/stop below)
+    ["mode", "dir", "speed", "stepPx"].forEach((k) => {
+      if (settings[k] !== undefined) this.autoScrollSettings[k] = settings[k];
+    });
+
     if (settings.enabled) {
-      this.showAutoScrollControls();
+      // Ensure floating controls are present
+      if (!document.getElementById("injector-autoscroll-controls")) {
+        this.showAutoScrollControls();
+      }
+      // Start or update the actual scroller
+      if (this.autoScroller) {
+        this.autoScroller.update({ ...this.autoScrollSettings });
+      } else {
+        this.startAutoScroll({ ...this.autoScrollSettings });
+        // Sync the on-page ▶/⏸ button visual to "running" state (danger color)
+        const btn = document.getElementById("injector-autoscroll-startstop");
+        if (btn) {
+          btn.innerHTML = `<span style="font-size: 18px;">⏸</span>`;
+          btn.title = "Pause Auto-Scroll";
+          btn.style.background = "linear-gradient(135deg, #ff5a71 0%, #e74860 100%)";
+          btn.style.boxShadow = "0 4px 15px rgba(255, 90, 113, 0.4)";
+        }
+      }
     } else {
-      this.hideAutoScrollControls();
       this.stopAutoScroll();
+      this.hideAutoScrollControls();
     }
   }
 
@@ -327,43 +368,62 @@ class ScriptRunner {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 
-    // Start/Stop button
+    // Brand-aligned styles (match the extension popup palette)
+    const RUN_BG = "linear-gradient(135deg, #3dd6f5 0%, #7c6cf8 100%)"; // accent → accent2
+    const RUN_SHADOW = "0 4px 15px rgba(61, 214, 245, 0.35)";
+    const STOP_BG = "linear-gradient(135deg, #ff5a71 0%, #e74860 100%)"; // danger
+    const STOP_SHADOW = "0 4px 15px rgba(255, 90, 113, 0.4)";
+    const GHOST_BG = "rgba(12, 14, 20, 0.9)"; // bg with slight transparency
+    const GHOST_BORDER = "rgba(61, 214, 245, 0.3)";
+    const GHOST_SHADOW = "0 4px 15px rgba(0, 0, 0, 0.35)";
+
+    // Start/Stop button — primary action (brand gradient when idle, danger when running)
     const startStopBtn = document.createElement("button");
     startStopBtn.id = "injector-autoscroll-startstop";
+    const running = !!this.autoScroller;
     startStopBtn.style.cssText = `
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: ${running ? STOP_BG : RUN_BG};
       border: none; border-radius: 50%;
-      color: white; padding: 12px; cursor: pointer;
-      font-size: 13px; font-weight: 600; width: 48px; height: 48px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      color: #080a10; padding: 0; cursor: pointer;
+      font-weight: 700; width: 42px; height: 42px;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s, background 0.25s;
+      box-shadow: ${running ? STOP_SHADOW : RUN_SHADOW};
       display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
     `;
-    startStopBtn.innerHTML = `
-      <span style="font-size: 18px;">${this.autoScroller ? '⏸' : '▶'}</span>
-    `;
-    startStopBtn.title = this.autoScroller ? "Pause Auto-Scroll" : "Start Auto-Scroll";
+    startStopBtn.innerHTML = `<span style="font-size: 16px;">${running ? '⏸' : '▶'}</span>`;
+    startStopBtn.title = running ? "Pause Auto-Scroll" : "Start Auto-Scroll";
     startStopBtn.addEventListener("click", () => this.toggleAutoScroll());
 
-    // Settings button
+    // Settings button — secondary (ghost) so it doesn't compete with the
+    // primary action. Same size as Play to feel balanced; the visual
+    // weight difference comes from filled vs ghost, not from dimensions.
     const settingsBtn = document.createElement("button");
     settingsBtn.id = "injector-autoscroll-settings";
     settingsBtn.style.cssText = `
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      border: none; border-radius: 50%;
-      color: white; padding: 12px; cursor: pointer;
-      font-size: 13px; font-weight: 600; width: 48px; height: 48px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+      background: ${GHOST_BG};
+      border: 1px solid ${GHOST_BORDER}; border-radius: 50%;
+      color: #3dd6f5; padding: 0; cursor: pointer;
+      font-weight: 600; width: 42px; height: 42px;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
+      box-shadow: ${GHOST_SHADOW};
       display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
+      backdrop-filter: blur(8px);
     `;
-    settingsBtn.innerHTML = `
-      <span style="font-size: 18px;">⚙</span>
-    `;
+    settingsBtn.innerHTML = `<span style="font-size: 16px;">⚙</span>`;
     settingsBtn.title = "Auto-Scroll Settings";
-    settingsBtn.addEventListener("click", () => this.showSettingsPopup());
+    settingsBtn.addEventListener("click", (e) => {
+      // Stop propagation so the popup's own outside-click handler can't fire
+      // on the same click that opened it. Toggle so a second gear-click
+      // closes — easier than hunting for an empty patch of page.
+      e.stopPropagation();
+      if (document.getElementById("injector-autoscroll-settings-panel")) {
+        this.hideSettingsPopup();
+      } else {
+        this.showSettingsPopup();
+      }
+    });
 
     // Add ripple effect
     const createRipple = (btn, e) => {
@@ -384,29 +444,38 @@ class ScriptRunner {
       setTimeout(() => ripple.remove(), 600);
     };
 
-    // Add enhanced hover effects and ripple
+    // Hover/press feedback — shadow color tracks the button's current state
+    const shadowFor = (btn, hover) => {
+      if (btn === settingsBtn) {
+        return hover ? "0 8px 25px rgba(0, 0, 0, 0.5)" : GHOST_SHADOW;
+      }
+      const isRunning = this.autoScroller !== null;
+      if (isRunning) {
+        return hover ? "0 8px 25px rgba(255, 90, 113, 0.55)" : STOP_SHADOW;
+      }
+      return hover ? "0 8px 25px rgba(61, 214, 245, 0.5)" : RUN_SHADOW;
+    };
+
     [startStopBtn, settingsBtn].forEach(btn => {
       btn.addEventListener("mouseenter", () => {
-        btn.style.transform = "translateY(-3px) scale(1.05)";
-        btn.style.boxShadow = btn === startStopBtn 
-          ? "0 8px 25px rgba(102, 126, 234, 0.6)"
-          : "0 8px 25px rgba(240, 147, 251, 0.6)";
+        btn.style.transform = "translateY(-2px) scale(1.04)";
+        btn.style.boxShadow = shadowFor(btn, true);
+        if (btn === settingsBtn) btn.style.borderColor = "rgba(61, 214, 245, 0.55)";
       });
-      
+
       btn.addEventListener("mouseleave", () => {
         btn.style.transform = "translateY(0) scale(1)";
-        btn.style.boxShadow = btn === startStopBtn 
-          ? "0 4px 15px rgba(102, 126, 234, 0.4)"
-          : "0 4px 15px rgba(240, 147, 251, 0.4)";
+        btn.style.boxShadow = shadowFor(btn, false);
+        if (btn === settingsBtn) btn.style.borderColor = GHOST_BORDER;
       });
 
       btn.addEventListener("mousedown", (e) => {
-        btn.style.transform = "translateY(-1px) scale(0.98)";
+        btn.style.transform = "translateY(0) scale(0.97)";
         createRipple(btn, e);
       });
-      
+
       btn.addEventListener("mouseup", () => {
-        btn.style.transform = "translateY(-3px) scale(1.05)";
+        btn.style.transform = "translateY(-2px) scale(1.04)";
       });
     });
 
@@ -468,29 +537,21 @@ class ScriptRunner {
 
   toggleAutoScroll() {
     const btn = document.getElementById("injector-autoscroll-startstop");
+    if (!btn) return;
     if (this.autoScroller) {
+      // Stop → return to idle/brand state
       this.stopAutoScroll();
-      // Update button to Start state
-      btn.innerHTML = `
-        <span style="font-size: 18px;">▶</span>
-      `;
+      btn.innerHTML = `<span style="font-size: 18px;">▶</span>`;
       btn.title = "Start Auto-Scroll";
-      btn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-      btn.style.boxShadow = "0 4px 15px rgba(102, 126, 234, 0.4)";
+      btn.style.background = "linear-gradient(135deg, #3dd6f5 0%, #7c6cf8 100%)";
+      btn.style.boxShadow = "0 4px 15px rgba(61, 214, 245, 0.35)";
     } else {
-      this.startAutoScroll({
-        dir: "down",
-        mode: "smooth",
-        speed: 120,
-        stepPx: 200
-      });
-      // Update button to Pause state
-      btn.innerHTML = `
-        <span style="font-size: 18px;">⏸</span>
-      `;
+      // Start → switch to danger/running state
+      this.startAutoScroll({ ...this.autoScrollSettings });
+      btn.innerHTML = `<span style="font-size: 18px;">⏸</span>`;
       btn.title = "Pause Auto-Scroll";
-      btn.style.background = "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)";
-      btn.style.boxShadow = "0 4px 15px rgba(240, 147, 251, 0.4)";
+      btn.style.background = "linear-gradient(135deg, #ff5a71 0%, #e74860 100%)";
+      btn.style.boxShadow = "0 4px 15px rgba(255, 90, 113, 0.4)";
     }
   }
 
@@ -498,173 +559,233 @@ class ScriptRunner {
     // Remove existing popup
     this.hideSettingsPopup();
 
-    // Create popup
+    // Create popup — matches the extension popup's dark surface and brand accents
     const popup = document.createElement("div");
-    popup.id = "injector-autoscroll-settings-popup";
+    popup.id = "injector-autoscroll-settings-panel";
     popup.style.cssText = `
       position: fixed; bottom: 80px; right: 20px; z-index: 1000000;
-      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
-      border: 1px solid rgba(124, 108, 248, 0.3); border-radius: 16px;
-      padding: 20px; min-width: 280px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      backdrop-filter: blur(10px);
+      background: #0c0e14;
+      border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;
+      padding: 16px; min-width: 280px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 60px rgba(61, 214, 245, 0.06);
+      color: #dce3f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      backdrop-filter: blur(12px);
     `;
 
     popup.innerHTML = `
-      <div style="font-weight: 700; margin-bottom: 16px; font-size: 16px; text-align: center; color: #fff;">
+      <div style="font-weight: 700; margin-bottom: 14px; font-size: 14px; text-align: center; color: #dce3f0; letter-spacing: -0.01em;">
         Auto-Scroll Settings
       </div>
-      
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Direction</div>
-        <div style="display: flex; gap: 8px;">
-          <button data-dir="down" class="dir-btn" style="flex: 1; padding: 8px; border: 2px solid #7c6cf8; background: linear-gradient(135deg, #7c6cf8, #6b5bc7); color: white; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Down</button>
-          <button data-dir="up" class="dir-btn" style="flex: 1; padding: 8px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Up</button>
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Mode</div>
+
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 10px; margin-bottom: 6px; color: #6b7794; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;">Direction</div>
         <div style="display: flex; gap: 6px;">
-          <button data-mode="smooth" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid #f5a623; background: linear-gradient(135deg, #f5a623, #e09512); color: white; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Smooth</button>
-          <button data-mode="step" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Step</button>
-          <button data-mode="loop" class="mode-btn" style="flex: 1; padding: 6px; border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #a8a8b8; cursor: pointer; font-size: 11px; font-weight: 600; border-radius: 6px; transition: all 0.2s;">Loop</button>
+          <button data-dir="down" class="dir-btn" style="flex: 1; padding: 7px; border: 1px solid rgba(124, 108, 248, 0.45); background: rgba(124, 108, 248, 0.08); color: #7c6cf8; cursor: pointer; font-size: 11.5px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">↓ Down</button>
+          <button data-dir="up" class="dir-btn" style="flex: 1; padding: 7px; border: 1px solid rgba(255,255,255,0.07); background: transparent; color: #dce3f0; cursor: pointer; font-size: 11.5px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">↑ Up</button>
         </div>
       </div>
-      
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Speed: <span id="speed-value" style="color: #7c6cf8; font-weight: 700;">120</span> px/s</div>
-        <input type="range" id="speed-slider" min="10" max="800" value="120" style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none;">
+
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 10px; margin-bottom: 6px; color: #6b7794; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;">Mode</div>
+        <div style="display: flex; gap: 5px;">
+          <button data-mode="smooth" class="mode-btn" style="flex: 1; padding: 7px; border: 1px solid rgba(245, 166, 35, 0.45); background: rgba(245, 166, 35, 0.08); color: #f5a623; cursor: pointer; font-size: 11.5px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">Smooth</button>
+          <button data-mode="step" class="mode-btn" style="flex: 1; padding: 7px; border: 1px solid rgba(255,255,255,0.07); background: transparent; color: #dce3f0; cursor: pointer; font-size: 11.5px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">Step</button>
+          <button data-mode="loop" class="mode-btn" style="flex: 1; padding: 7px; border: 1px solid rgba(255,255,255,0.07); background: transparent; color: #dce3f0; cursor: pointer; font-size: 11.5px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">Loop</button>
+        </div>
       </div>
-      
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; margin-bottom: 6px; color: #a8a8b8; font-weight: 500;">Step: <span id="step-value" style="color: #f5a623; font-weight: 700;">200</span> px</div>
-        <input type="range" id="step-slider" min="50" max="1000" value="200" style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none;">
+
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+          <span style="font-size: 10px; color: #6b7794; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;">Speed</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #f5a623; font-weight: 700;"><span id="speed-value">120</span> px/s</span>
+        </div>
+        <input type="range" id="speed-slider" min="10" max="800" value="120" style="width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; outline: none; -webkit-appearance: none;">
       </div>
-      
-      <button id="close-settings" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; cursor: pointer; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.2s;">Close</button>
+
+      <div id="step-row" style="margin-bottom: 14px; transition: opacity 0.2s;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+          <span style="font-size: 10px; color: #6b7794; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;">Step Size <span id="step-hint" style="text-transform: none; letter-spacing: 0; color: #4e5870; font-weight: 500;"></span></span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #7c6cf8; font-weight: 700;"><span id="step-value">200</span> px</span>
+        </div>
+        <input type="range" id="step-slider" min="50" max="1000" value="200" style="width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; outline: none; -webkit-appearance: none;">
+      </div>
+
+      <button id="close-settings" style="width: 100%; padding: 8px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.07); color: #dce3f0; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 7px; transition: all 0.18s;">Close</button>
     `;
 
     document.body.appendChild(popup);
 
-    // Store current settings
-    const currentSettings = {
-      dir: this.autoScroller ? this.autoScroller.dir : "down",
-      mode: this.autoScroller ? this.autoScroller.mode : "smooth",
-      speed: this.autoScroller ? this.autoScroller.speed : 120,
-      stepPx: this.autoScroller ? this.autoScroller.stepPx : 200
+    // Source of truth — persisted across popup open/close and reads back from
+    // the live AutoScroller if one is running.
+    const settings = this.autoScrollSettings;
+    if (this.autoScroller) {
+      settings.dir = this.autoScroller.dir;
+      settings.mode = this.autoScroller.mode;
+      settings.speed = this.autoScroller.speed;
+      settings.stepPx = this.autoScroller.stepPx;
+    }
+
+    // Style palettes — match the popup's "quiet" active treatment:
+    // subtle bg tint + colored border + colored text (not full gradient fill).
+    const DIR_ACTIVE = {
+      background: "rgba(124, 108, 248, 0.08)",
+      borderColor: "rgba(124, 108, 248, 0.45)",
+      color: "#7c6cf8",
+    };
+    const MODE_ACTIVE = {
+      background: "rgba(245, 166, 35, 0.08)",
+      borderColor: "rgba(245, 166, 35, 0.45)",
+      color: "#f5a623",
+    };
+    const INACTIVE = {
+      background: "transparent",
+      borderColor: "rgba(255, 255, 255, 0.07)",
+      color: "#dce3f0",
+    };
+    const applyStyle = (el, s) => {
+      el.style.background = s.background;
+      el.style.borderColor = s.borderColor;
+      el.style.color = s.color;
+    };
+    const syncGroup = (sel, attr, value, activeStyle) => {
+      popup.querySelectorAll(sel).forEach((b) => {
+        applyStyle(b, b.dataset[attr] === value ? activeStyle : INACTIVE);
+      });
     };
 
-    // Setup event listeners
-    popup.querySelectorAll(".dir-btn").forEach(btn => {
+    // Step Size only applies in Step mode (setInterval + nudge by stepPx).
+    // In Smooth/Loop it's ignored, so we visually disable the row to make
+    // that obvious and prevent the user from "tweaking" something that
+    // does nothing.
+    const stepRow = popup.querySelector("#step-row");
+    const stepSliderEl = popup.querySelector("#step-slider");
+    const stepHint = popup.querySelector("#step-hint");
+    const syncStepEnabled = (mode) => {
+      const active = mode === "step";
+      if (stepRow) stepRow.style.opacity = active ? "1" : "0.4";
+      if (stepSliderEl) {
+        stepSliderEl.disabled = !active;
+        stepSliderEl.style.cursor = active ? "pointer" : "not-allowed";
+      }
+      if (stepHint) stepHint.textContent = active ? "" : "(Step mode only)";
+    };
+
+    // Initial visual sync from persisted settings (overrides hardcoded
+    // Smooth+Down active styling in the template above)
+    syncGroup(".dir-btn", "dir", settings.dir, DIR_ACTIVE);
+    syncGroup(".mode-btn", "mode", settings.mode, MODE_ACTIVE);
+    syncStepEnabled(settings.mode);
+
+    // Direction — both Smooth and Step read this.dir each tick, so a
+    // property mutation is enough (no restart needed).
+    popup.querySelectorAll(".dir-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        popup.querySelectorAll(".dir-btn").forEach(b => {
-          b.style.background = "rgba(255,255,255,0.05)";
-          b.style.borderColor = "rgba(255,255,255,0.1)";
-          b.style.color = "#a8a8b8";
-        });
-        btn.style.background = "linear-gradient(135deg, #7c6cf8, #6b5bc7)";
-        btn.style.borderColor = "#7c6cf8";
-        btn.style.color = "white";
-        currentSettings.dir = btn.dataset.dir;
+        settings.dir = btn.dataset.dir;
+        syncGroup(".dir-btn", "dir", settings.dir, DIR_ACTIVE);
         if (this.autoScroller) {
-          this.autoScroller.dir = currentSettings.dir;
-        }
-      });
-      
-      btn.addEventListener("mouseenter", () => {
-        if (btn.style.background === "rgba(255,255,255,0.05)" || btn.style.background.includes("0.05")) {
-          btn.style.background = "rgba(255,255,255,0.1)";
-          btn.style.borderColor = "rgba(255,255,255,0.2)";
-        }
-      });
-      
-      btn.addEventListener("mouseleave", () => {
-        if (btn.style.background === "rgba(255,255,255,0.1)" || btn.style.background.includes("0.1")) {
-          btn.style.background = "rgba(255,255,255,0.05)";
-          btn.style.borderColor = "rgba(255,255,255,0.1)";
+          this.autoScroller.dir = settings.dir;
         }
       });
     });
 
-    popup.querySelectorAll(".mode-btn").forEach(btn => {
+    // Mode switch — Smooth uses requestAnimationFrame while Step uses
+    // setInterval. Property mutation alone leaves the old timer running, so
+    // we MUST go through update() which stops the old loop and starts the
+    // new one. This was the bug where clicking Step/Loop appeared to do
+    // nothing.
+    popup.querySelectorAll(".mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        popup.querySelectorAll(".mode-btn").forEach(b => {
-          b.style.background = "rgba(255,255,255,0.05)";
-          b.style.borderColor = "rgba(255,255,255,0.1)";
-          b.style.color = "#a8a8b8";
-        });
-        btn.style.background = "linear-gradient(135deg, #f5a623, #e09512)";
-        btn.style.borderColor = "#f5a623";
-        btn.style.color = "white";
-        currentSettings.mode = btn.dataset.mode;
+        settings.mode = btn.dataset.mode;
+        syncGroup(".mode-btn", "mode", settings.mode, MODE_ACTIVE);
+        syncStepEnabled(settings.mode);
         if (this.autoScroller) {
-          this.autoScroller.mode = currentSettings.mode;
-        }
-      });
-      
-      btn.addEventListener("mouseenter", () => {
-        if (btn.style.background === "rgba(255,255,255,0.05)" || btn.style.background.includes("0.05")) {
-          btn.style.background = "rgba(255,255,255,0.1)";
-          btn.style.borderColor = "rgba(255,255,255,0.2)";
-        }
-      });
-      
-      btn.addEventListener("mouseleave", () => {
-        if (btn.style.background === "rgba(255,255,255,0.1)" || btn.style.background.includes("0.1")) {
-          btn.style.background = "rgba(255,255,255,0.05)";
-          btn.style.borderColor = "rgba(255,255,255,0.1)";
+          this.autoScroller.update({ mode: settings.mode });
         }
       });
     });
+
+    // Webkit range inputs don't paint a filled portion before the thumb —
+    // emulate via linear-gradient bg. `fillColor` differs per slider so each
+    // slider's track matches its thumb.
+    const paintTrack = (input, fillColor) => {
+      const min = +input.min || 0;
+      const max = +input.max || 100;
+      const pct = ((+input.value - min) / (max - min)) * 100;
+      const idle = "rgba(255, 255, 255, 0.06)";
+      input.style.background = `linear-gradient(to right, ${fillColor} 0%, ${fillColor} ${pct}%, ${idle} ${pct}%, ${idle} 100%)`;
+    };
 
     const speedSlider = popup.querySelector("#speed-slider");
     const speedValue = popup.querySelector("#speed-value");
+    speedSlider.value = settings.speed;
+    speedValue.textContent = settings.speed;
+    paintTrack(speedSlider, "#f5a623");
     speedSlider.addEventListener("input", () => {
-      currentSettings.speed = parseInt(speedSlider.value);
-      speedValue.textContent = currentSettings.speed;
+      settings.speed = parseInt(speedSlider.value);
+      speedValue.textContent = settings.speed;
+      paintTrack(speedSlider, "#f5a623");
       if (this.autoScroller) {
-        this.autoScroller.speed = currentSettings.speed;
+        this.autoScroller.speed = settings.speed;
       }
     });
 
     const stepSlider = popup.querySelector("#step-slider");
     const stepValue = popup.querySelector("#step-value");
+    stepSlider.value = settings.stepPx;
+    stepValue.textContent = settings.stepPx;
+    paintTrack(stepSlider, "#7c6cf8");
     stepSlider.addEventListener("input", () => {
-      currentSettings.stepPx = parseInt(stepSlider.value);
-      stepValue.textContent = currentSettings.stepPx;
+      settings.stepPx = parseInt(stepSlider.value);
+      stepValue.textContent = settings.stepPx;
+      paintTrack(stepSlider, "#7c6cf8");
       if (this.autoScroller) {
-        this.autoScroller.stepPx = currentSettings.stepPx;
+        this.autoScroller.stepPx = settings.stepPx;
       }
     });
 
     // Add slider styling
     const style = document.createElement('style');
     style.textContent = `
-      #injector-autoscroll-settings-popup input[type="range"]::-webkit-slider-thumb {
+      #injector-autoscroll-settings-panel input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
-        background: linear-gradient(135deg, #7c6cf8, #6b5bc7);
+        width: 14px;
+        height: 14px;
+        background: #f5a623;
         cursor: pointer;
         border-radius: 50%;
-        box-shadow: 0 2px 8px rgba(124, 108, 248, 0.5);
+        box-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
+        transition: box-shadow 0.18s, transform 0.18s;
       }
-      
-      #injector-autoscroll-settings-popup input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: linear-gradient(135deg, #7c6cf8, #6b5bc7);
+      #injector-autoscroll-settings-panel input[type="range"]::-webkit-slider-thumb:hover {
+        box-shadow: 0 0 12px rgba(245, 166, 35, 0.8);
+        transform: scale(1.1);
+      }
+      #injector-autoscroll-settings-panel input[type="range"]::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: #f5a623;
         cursor: pointer;
         border-radius: 50%;
         border: none;
-        box-shadow: 0 2px 8px rgba(124, 108, 248, 0.5);
+        box-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
       }
-      
-      #injector-autoscroll-settings-popup #close-settings:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      #injector-autoscroll-settings-panel #step-slider::-webkit-slider-thumb {
+        background: #7c6cf8;
+        box-shadow: 0 0 8px rgba(124, 108, 248, 0.5);
+      }
+      #injector-autoscroll-settings-panel #step-slider::-webkit-slider-thumb:hover {
+        box-shadow: 0 0 12px rgba(124, 108, 248, 0.8);
+      }
+      #injector-autoscroll-settings-panel #step-slider::-moz-range-thumb {
+        background: #7c6cf8;
+        box-shadow: 0 0 8px rgba(124, 108, 248, 0.5);
+      }
+      #injector-autoscroll-settings-panel #close-settings:hover {
+        border-color: rgba(61, 214, 245, 0.4);
+        color: #3dd6f5;
+        background: rgba(61, 214, 245, 0.05);
       }
     `;
     document.head.appendChild(style);
@@ -673,20 +794,27 @@ class ScriptRunner {
       this.hideSettingsPopup();
     });
 
-    // Close popup when clicking outside
-    const closeHandler = (e) => {
-      if (!popup.contains(e.target)) {
-        this.hideSettingsPopup();
-        document.removeEventListener("click", closeHandler);
-      }
+    // Close popup when clicking outside. Use `mousedown` (fires before click)
+    // and check against both the popup and the gear button, so the gear's
+    // own click can still toggle the popup closed without this handler
+    // racing it. Handler is stored on `this` so hideSettingsPopup() can
+    // always tear it down, regardless of how the popup is dismissed.
+    this._asCloseHandler = (e) => {
+      if (popup.contains(e.target)) return;
+      if (e.target.closest && e.target.closest("#injector-autoscroll-settings")) return;
+      this.hideSettingsPopup();
     };
-    setTimeout(() => document.addEventListener("click", closeHandler), 100);
+    document.addEventListener("mousedown", this._asCloseHandler);
   }
 
   hideSettingsPopup() {
-    const popup = document.getElementById("injector-autoscroll-settings-popup");
+    const popup = document.getElementById("injector-autoscroll-settings-panel");
     if (popup) {
       popup.remove();
+    }
+    if (this._asCloseHandler) {
+      document.removeEventListener("mousedown", this._asCloseHandler);
+      this._asCloseHandler = null;
     }
   }
 
@@ -886,10 +1014,12 @@ class AutoScroller {
     indicator.style.cssText = `
       position: fixed; top: 50%; right: 20px; z-index: 999999;
       transform: translateY(-50%);
-      background: #1a1a1a; border: 2px solid #3dd6f5; border-radius: 50%;
-      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 16px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
+      background: rgba(12, 14, 20, 0.92); border: 1px solid rgba(61, 214, 245, 0.4); border-radius: 50%;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      color: #3dd6f5; font-size: 15px; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(61, 214, 245, 0.15);
+      backdrop-filter: blur(8px);
+      transition: all 0.25s ease;
     `;
     indicator.innerHTML = this.dir === 'down' ? '↓' : '↑';
     indicator.title = 'Auto-scrolling (' + this.mode + ')';

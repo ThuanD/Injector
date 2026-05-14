@@ -6,51 +6,15 @@ const SCRIPT_TEMPLATES = {
   // ══════════════════════════════════════════
   // 🧹 DOM CLEANUP
   // ══════════════════════════════════════════
-
-  removeAds: {
-    name: "Remove Ads & Banners",
-    description:
-      "Remove ads, banners, popups on most websites.",
-    category: "🧹 DOM Cleanup",
-    code: `(function removeAds() {
-  const adSelectors = [
-    '[id*="ad-"]', '[id*="-ad"]', '[id*="_ad"]',
-    '[id*="ads"]', '[id*="banner"]', '[id*="popup"]',
-    '[class*="advert"]', '[class*="ads-"]', '[class*="-ads"]',
-    '[class*="ad-container"]', '[class*="ad-wrapper"]',
-    '[class*="banner-ads"]', '[class*="sponsored"]',
-    '[class*="promo-banner"]', '[class*="sticky-ad"]',
-    '[data-ad]', '[data-ad-slot]', '[data-google-query-id]',
-    'ins.adsbygoogle',
-    '.widget-area aside[class*="ad"]',
-  ];
-
-  let removed = 0;
-  adSelectors.forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => {
-      el.remove();
-      removed++;
-    });
-  });
-
-  // Monitor and remove dynamically injected ads
-  const observer = new MutationObserver(() => {
-    adSelectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(el => {
-        el.remove();
-      });
-    });
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  console.log('[Injector] Removed ' + removed + ' ad elements');
-})();`,
-  },
+  //
+  // Note: the former "Remove Ads & Banners" template was merged into the
+  // built-in Hide Elements feature as a Preset ("🧹 Ad blocker") to avoid
+  // having two overlapping mechanisms for the same job.
 
   blockNewWindows: {
     name: "Block New Windows & Tabs",
     description:
-      "Block click-hijack ad tabs common on Vietnamese manga sites.",
+      "Stop click-hijack popups and pop-unders — forces every link to open in the current tab and intercepts window.open / .target='_blank' tricks.",
     category: "🧹 DOM Cleanup",
     code: `(function blockNewWindows() {
   'use strict';
@@ -215,9 +179,8 @@ const SCRIPT_TEMPLATES = {
     }
   });
 
-  // Add padding-top lost from header removal
-  document.body.style.paddingTop = '0';
-  document.body.style.marginTop  = '0';
+  // Don't touch body.padding / margin here — some sites rely on a legitimate
+  // top padding for non-sticky reasons. Removing the bar alone is enough.
 
   console.log('[Injector] Removed ' + removed + ' sticky bars');
 })();`,
@@ -356,10 +319,19 @@ const SCRIPT_TEMPLATES = {
   overlay.appendChild(exitBtn);
   document.body.appendChild(overlay);
 
-  // Exit with ESC
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') overlay.remove();
-  }, { once: true });
+  // Exit with ESC — must NOT use { once: true } (would fire on any first
+  // keypress and remove itself before ESC is ever pressed). Self-remove only
+  // when the actual ESC key is detected.
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+  exitBtn.addEventListener('click', () => {
+    document.removeEventListener('keydown', escHandler);
+  });
 })();`,
   },
 
@@ -369,18 +341,18 @@ const SCRIPT_TEMPLATES = {
       "Automatically fill personal information into forms. Edit config variables below before using.",
     category: "⚡ Productivity",
     code: `(function autoFillForms() {
-  // ── Edit your information here ──
+  // ── Edit your information here (these are placeholders) ──
   const INFO = {
-    firstName : 'Nguyen',
-    lastName  : 'Van A',
-    fullName  : 'Nguyen Van A',
-    email     : 'your@email.com',
-    phone     : '0901234567',
-    address   : '123 Nguyen Trai, Hanoi',
-    city      : 'Hanoi',
-    country   : 'Vietnam',
-    zipCode   : '100000',
-    company   : 'My Company',
+    firstName : 'John',
+    lastName  : 'Doe',
+    fullName  : 'John Doe',
+    email     : 'you@example.com',
+    phone     : '+1 555 123 4567',
+    address   : '123 Main St',
+    city      : 'New York',
+    country   : 'United States',
+    zipCode   : '10001',
+    company   : 'Acme Inc.',
     website   : 'https://example.com',
   };
 
@@ -428,6 +400,14 @@ const SCRIPT_TEMPLATES = {
       "Automatically generate floating table of contents from article headings (h1–h3), clickable to jump to sections.",
     category: "⚡ Productivity",
     code: `(function generateTOC() {
+  // Toggle: if a TOC is already on the page, remove it and exit
+  const existing = document.getElementById('injector-toc');
+  if (existing) {
+    existing.remove();
+    console.log('[Injector] TOC removed');
+    return;
+  }
+
   const headings = document.querySelectorAll('h1, h2, h3');
   if (headings.length < 3) {
     console.log('[Injector] Not enough headings for TOC');
@@ -484,6 +464,14 @@ const SCRIPT_TEMPLATES = {
       "Display word count, character count and estimated reading time for articles right on the page.",
     category: "⚡ Productivity",
     code: `(function wordCounter() {
+  // Toggle: if badge already exists, remove and exit
+  const existingBadge = document.getElementById('injector-wordcount');
+  if (existingBadge) {
+    existingBadge.remove();
+    console.log('[Injector] Word counter removed');
+    return;
+  }
+
   // Get main text content
   const contentEls = ['article', 'main', '.post-content', '.article-content', '.entry-content', '#content'];
   let text = '';
@@ -493,11 +481,12 @@ const SCRIPT_TEMPLATES = {
   }
   if (!text) text = document.body.innerText;
 
-  const words   = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-  const chars   = text.replace(/\s/g, '').length;
+  const words   = text.trim().split(/\\s+/).filter(w => w.length > 0).length;
+  const chars   = text.replace(/\\s/g, '').length;
   const minutes = Math.ceil(words / 200); // average reading speed 200 wpm
 
   const badge = document.createElement('div');
+  badge.id = 'injector-wordcount';
   badge.style.cssText = \`
     position: fixed; bottom: 20px; right: 20px;
     background: #141720; border: 1px solid rgba(61,214,245,.25);
@@ -569,7 +558,7 @@ const SCRIPT_TEMPLATES = {
   document.head.appendChild(style);
   document.documentElement.style.colorScheme = 'dark';
 
-  console.log('[Injector] Dark mode ON (press the button again to toggle OFF)');
+  console.log('[Injector] Dark mode ON — re-run this script to toggle OFF');
 })();`,
   },
 
@@ -651,6 +640,12 @@ const SCRIPT_TEMPLATES = {
       "Mouse over any element to highlight and show tag, class, id info. Press ESC to disable.",
     category: "🔧 Developer Tools",
     code: `(function elementInspector() {
+  // Toggle: if already on, turn off and clean up everything
+  if (window.__injectorInspectorOff) {
+    window.__injectorInspectorOff();
+    return;
+  }
+
   const tooltip = document.createElement('div');
   tooltip.style.cssText = \`
     position: fixed; pointer-events: none; z-index: 999999;
@@ -664,7 +659,7 @@ const SCRIPT_TEMPLATES = {
 
   let lastEl = null;
 
-  document.addEventListener('mouseover', e => {
+  const onMouseOver = e => {
     if (e.target === tooltip) return;
     lastEl = e.target;
     lastEl.style.outline = '2px solid #3dd6f5';
@@ -678,37 +673,50 @@ const SCRIPT_TEMPLATES = {
 
     tooltip.innerHTML = \`<b style="color:#3dd6f5">\${tag}\${id}\${cls}</b><br>\${w} × \${h}px\`;
     tooltip.style.display = 'block';
-  }, true);
+  };
 
-  document.addEventListener('mouseout', e => {
+  const onMouseOut = e => {
     if (lastEl && e.target === lastEl) {
       lastEl.style.outline = '';
       lastEl = null;
     }
     tooltip.style.display = 'none';
-  }, true);
+  };
 
-  document.addEventListener('mousemove', e => {
+  const onMouseMove = e => {
     tooltip.style.left = (e.clientX + 14) + 'px';
     tooltip.style.top  = (e.clientY + 14) + 'px';
-  });
+  };
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      tooltip.remove();
-      if (lastEl) lastEl.style.outline = '';
-      console.log('[Injector] Inspector OFF');
-    }
-  });
+  // Clean teardown — removes every listener, the tooltip, and any leftover outline
+  window.__injectorInspectorOff = () => {
+    document.removeEventListener('mouseover', onMouseOver, true);
+    document.removeEventListener('mouseout',  onMouseOut,  true);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('keydown',   onKeydown);
+    tooltip.remove();
+    if (lastEl) lastEl.style.outline = '';
+    delete window.__injectorInspectorOff;
+    console.log('[Injector] Inspector OFF');
+  };
 
-  console.log('[Injector] Inspector ON — hover to inspect, ESC to exit');
+  const onKeydown = e => {
+    if (e.key === 'Escape') window.__injectorInspectorOff();
+  };
+
+  document.addEventListener('mouseover', onMouseOver, true);
+  document.addEventListener('mouseout',  onMouseOut,  true);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('keydown',   onKeydown);
+
+  console.log('[Injector] Inspector ON — hover to inspect, ESC or re-run to exit');
 })();`,
   },
 
   showGridOverlay: {
     name: "CSS Grid Overlay",
     description:
-      "Show 8px grid lines to check layout. Click bookmarklet again to toggle.",
+      "Show 8px grid lines for layout debugging. Re-run the script to toggle off.",
     category: "🔧 Developer Tools",
     code: `(function gridOverlay() {
   const id = 'injector-grid';
@@ -886,7 +894,17 @@ const SCRIPT_TEMPLATES = {
     category: "📊 Page Analytics",
     code: `(function scrollDepthTracker() {
   const id = 'injector-progress';
-  if (document.getElementById(id)) { document.getElementById(id).remove(); return; }
+  // Toggle: re-running tears down both DOM nodes AND the scroll listener
+  if (document.getElementById(id)) {
+    document.getElementById(id).remove();
+    document.getElementById('injector-progress-pct')?.remove();
+    if (window.__injectorScrollHandler) {
+      window.removeEventListener('scroll', window.__injectorScrollHandler);
+      delete window.__injectorScrollHandler;
+    }
+    console.log('[Injector] Scroll tracker OFF');
+    return;
+  }
 
   const bar = document.createElement('div');
   bar.id = id;
@@ -898,6 +916,7 @@ const SCRIPT_TEMPLATES = {
   \`;
 
   const pct = document.createElement('span');
+  pct.id = 'injector-progress-pct';
   pct.style.cssText = \`
     position:fixed;top:6px;right:12px;
     font-family:system-ui;font-size:11px;font-weight:700;
@@ -908,15 +927,19 @@ const SCRIPT_TEMPLATES = {
   document.body.appendChild(bar);
   document.body.appendChild(pct);
 
-  window.addEventListener('scroll', () => {
+  const onScroll = () => {
     const scrolled = window.scrollY;
     const total    = document.documentElement.scrollHeight - window.innerHeight;
     const progress = total > 0 ? Math.round((scrolled / total) * 100) : 0;
     bar.style.width = progress + '%';
     pct.textContent = progress + '%';
-  });
+  };
+  window.__injectorScrollHandler = onScroll;
+  window.addEventListener('scroll', onScroll, { passive: true });
+  // Render once for current position (in case page is already scrolled)
+  onScroll();
 
-  console.log('[Injector] Scroll tracker ON — run again to toggle OFF');
+  console.log('[Injector] Scroll tracker ON — re-run to toggle OFF');
 })();`,
   },
 
@@ -950,7 +973,10 @@ const SCRIPT_TEMPLATES = {
       const el = document.querySelector(sel);
       if (el) {
         const text  = el.innerText || el.getAttribute('content') || '';
-        const match = text.match(/[\d.,]+/);
+        // \\d (double-escaped because we're inside a template literal — single
+        // \\d would be silently downgraded to "d" and the regex would never
+        // match real digits, producing NaN prices)
+        const match = text.match(/[\\d.,]+/);
         if (match) return { text: text.trim(), num: parseFloat(match[0].replace(',', '.')) };
       }
     }
@@ -1060,16 +1086,20 @@ const SCRIPT_TEMPLATES = {
   couponFinder: {
     name: "Coupon Code Finder",
     description:
-      "Find and display all coupon codes hidden in page source code.",
+      "Scan the page HTML, inline scripts, and JSON data for coupon / promo / discount / voucher codes. Click any code to copy.",
     category: "🛒 E-Commerce",
     code: `(function couponFinder() {
+  // NOTE: \\s here is intentional — this whole block lives inside a JS template
+  // literal (the parent \`code:\` string). \\s survives template processing as \\s,
+  // which the regex engine then reads as the whitespace class. A single \\s would
+  // be dropped to just "s".
   const couponPatterns = [
-    /coupon[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
-    /promo[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
-    /discount[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
-    /voucher[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
-    /gift[_-]?code[\"'\s:=]+([A-Z0-9_-]{4,20})/gi,
-    /code[\"':\s]+([A-Z]{2,4}[0-9]{2,8})/g,
+    /coupon[_-]?code["'\\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /promo[_-]?code["'\\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /discount[_-]?code["'\\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /voucher[_-]?code["'\\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /gift[_-]?code["'\\s:=]+([A-Z0-9_-]{4,20})/gi,
+    /code["':\\s]+([A-Z]{2,4}[0-9]{2,8})/g,
   ];
 
   const source = document.documentElement.innerHTML;
@@ -1130,167 +1160,10 @@ const SCRIPT_TEMPLATES = {
   // ══════════════════════════════════════════
   // 🖱 AUTOMATION
   // ══════════════════════════════════════════
-
-  infiniteScrollLoader: {
-    name: "Auto Infinite Scroll",
-    description:
-      "Automatically scroll page to load more content, perfect for reading manga/novels.",
-    category: "🖱 Automation",
-    code: `(function autoScroll() {
-  // ===== CONFIGURATION =====
-  const SCROLL_SPEED  = 5;     // px per tick (1-10 recommended)
-  const TICK_INTERVAL = 40;    // ms (20-100 for smoothness)
-  const PAUSE_AT_BOTTOM = 1500; // ms pause when reaching bottom
-  const MAX_SCROLLS   = 100;   // max scroll cycles (0 = unlimited)
-  
-  // Reading mode optimizations
-  const READING_MODE = true;    // optimized for reading content
-  const SMART_PAUSE = true;     // pause longer at bottom for content loading
-  const SHOW_CONTROLS = true;   // show floating controls
-
-  const id = 'injector-autoscroll';
-  
-  // ===== CLEANUP EXISTING INSTANCE =====
-  if (window[id]) {
-    clearInterval(window[id]);
-    window[id] = null;
-    // Remove existing UI elements
-    const existingUI = document.getElementById('injector-autoscroll-ui');
-    if (existingUI) existingUI.remove();
-    console.log('[AutoScroll] Stopped');
-    return;
-  }
-
-  // ===== STATE MANAGEMENT =====
-  let bottomCount = 0;
-  let waiting = false;
-  let isActive = true;
-
-  // ===== UI CONTROLS =====
-  function createControls() {
-    if (!SHOW_CONTROLS) return;
-    
-    const controls = document.createElement('div');
-    controls.id = 'injector-autoscroll-ui';
-    controls.style.cssText = \`
-      position: fixed; top: 20px; right: 20px; z-index: 999999;
-      background: #1a1a1a; border: 1px solid #3dd6f5; border-radius: 8px;
-      padding: 12px; color: white; font-family: system-ui; font-size: 12px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3); min-width: 180px;
-    \`;
-    
-    controls.innerHTML = \`
-      <div style="margin-bottom: 8px; font-weight: 600; color: #3dd6f5;">📜 Auto Scroll</div>
-      <div>Speed: <span id="as-speed">\${SCROLL_SPEED}</span> px/tick</div>
-      <div>Scrolls: <span id="as-count">0</span> / \${MAX_SCROLLS || '∞'}</div>
-      <div style="margin-top: 8px; font-size: 11px; color: #888;">
-        ↑↓ Speed | ESC Stop | R Reset
-      </div>
-    \`;
-    
-    document.body.appendChild(controls);
-    return controls;
-  }
-
-  const ui = createControls();
-
-  // ===== UPDATE UI =====
-  function updateUI() {
-    if (!ui) return;
-    const speedEl = document.getElementById('as-speed');
-    const countEl = document.getElementById('as-count');
-    if (speedEl) speedEl.textContent = SCROLL_SPEED;
-    if (countEl) countEl.textContent = bottomCount;
-  }
-
-  // ===== MAIN SCROLL LOGIC =====
-  window[id] = setInterval(() => {
-    if (!isActive || waiting) return;
-
-    window.scrollBy(0, SCROLL_SPEED);
-
-    // Check if reached bottom with better detection
-    const scrollPosition = window.innerHeight + window.scrollY;
-    const documentHeight = document.documentElement.scrollHeight;
-    const threshold = READING_MODE ? 100 : 50;
-    const isBottom = scrollPosition >= documentHeight - threshold;
-
-    if (isBottom) {
-      bottomCount++;
-      updateUI();
-      
-      // Check scroll limit
-      if (MAX_SCROLLS > 0 && bottomCount >= MAX_SCROLLS) {
-        clearInterval(window[id]);
-        window[id] = null;
-        isActive = false;
-        console.log('[AutoScroll] Reached max scroll limit:', MAX_SCROLLS);
-        if (ui) {
-          ui.style.borderColor = '#ff5a71';
-          ui.innerHTML += '<div style="margin-top:8px;color:#ff5a71;">✋ Limit reached</div>';
-        }
-        return;
-      }
-
-      // Smart pause logic
-      waiting = true;
-      const multiplier = SMART_PAUSE && bottomCount % 3 === 0 ? 2 : 1;
-      const pauseDuration = PAUSE_AT_BOTTOM * multiplier;
-      
-      setTimeout(() => { 
-        waiting = false; 
-      }, pauseDuration);
-      
-      console.log('[AutoScroll] Bottom reached, waiting ' + (pauseDuration/1000) + 's... (scroll #' + bottomCount + ')');
-      
-      // Visual feedback
-      if (READING_MODE && document.body) {
-        document.body.style.borderTop = '3px solid #3dd6f5';
-        setTimeout(() => { document.body.style.borderTop = ''; }, pauseDuration / 2);
-      }
-    }
-  }, TICK_INTERVAL);
-
-  // ===== KEYBOARD CONTROLS =====
-  function handleKeydown(e) {
-    if (e.key === 'Escape') {
-      clearInterval(window[id]);
-      window[id] = null;
-      isActive = false;
-      console.log('[AutoScroll] Stopped by user');
-      if (ui) ui.remove();
-    } else if (e.key === 'ArrowUp') {
-      SCROLL_SPEED = Math.max(1, SCROLL_SPEED - 1);
-      updateUI();
-      console.log('[AutoScroll] Speed:', SCROLL_SPEED + 'px/tick');
-    } else if (e.key === 'ArrowDown') {
-      SCROLL_SPEED = Math.min(10, SCROLL_SPEED + 1);
-      updateUI();
-      console.log('[AutoScroll] Speed:', SCROLL_SPEED + 'px/tick');
-    } else if (e.key.toLowerCase() === 'r') {
-      bottomCount = 0;
-      updateUI();
-      console.log('[AutoScroll] Reset scroll count');
-    }
-  }
-
-  document.addEventListener('keydown', handleKeydown, { once: false });
-
-  // ===== INITIALIZATION =====
-  updateUI();
-  console.log('[AutoScroll] Started for reading — ESC: stop, ↑↓: speed, R: reset');
-  
-  // ===== CLEANUP ON PAGE UNLOAD =====
-  window.addEventListener('beforeunload', () => {
-    if (window[id]) {
-      clearInterval(window[id]);
-      window[id] = null;
-    }
-    if (ui) ui.remove();
-    document.removeEventListener('keydown', handleKeydown);
-  });
-})();`,
-  },
+  //
+  // Note: the former "Auto Infinite Scroll" template was merged into the
+  // built-in Auto-Scroll feature (popup → Scroll tab) which already provides
+  // an on-page control panel with speed slider, direction, and mode picker.
 
   copyAllLinks: {
     name: "Copy All Links on Page",
@@ -1391,7 +1264,6 @@ const SCRIPT_TEMPLATES = {
     [data-testid="placementTracking"] { display: none !important; }
 
     /* Hide "Who to follow" in timeline */
-    [data-testid="UserCell"] ~ div[class] { }
     aside[aria-label*="follow" i]        { display: none !important; }
 
     /* Hide Topics to follow */
@@ -1464,8 +1336,9 @@ const SCRIPT_TEMPLATES = {
   sessionExport: {
     name: "Session Exporter",
     description:
-      "Export cookies + localStorage of current page as code to share with others (no password sharing needed).",
+      "Export cookies, localStorage, and sessionStorage of the current site as a shareable code — recipient can sign in without your password.",
     category: "🔑 Session Sharing",
+    verified: true,
     code: `(function sessionExport() {
   const domain = location.hostname;
 
@@ -1598,8 +1471,9 @@ const SCRIPT_TEMPLATES = {
   sessionImport: {
     name: "Session Importer",
     description:
-      "Import session code exported from Script Exporter to login to account without password.",
+      "Import session code exported from Session Exporter to log into an account without typing the password.",
     category: "🔑 Session Sharing",
+    verified: true,
     code: `(function sessionImport() {
   const domain = location.hostname;
 
@@ -1749,7 +1623,7 @@ const SCRIPT_TEMPLATES = {
     const result = applySession(parsedPayload);
 
     const applyBtn = document.getElementById('wc-im-apply');
-    applyBtn.textContent = 'â Imported ' + (result.cookies + result.localStorage + result.sessionStorage) + ' items â Reloading...';
+    applyBtn.textContent = '✓ Imported ' + (result.cookies + result.localStorage + result.sessionStorage) + ' items — Reloading...';
     applyBtn.disabled = true;
 
     setTimeout(() => location.reload(), 1200);
